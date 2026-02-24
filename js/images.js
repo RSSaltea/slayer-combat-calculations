@@ -1,30 +1,14 @@
-// Monster and UI image mappings - local paths (downloaded from imgur)
+// Monster and UI image mappings - local paths (downloaded from runescape.wiki)
 const IMAGES = {
-  // UI / Boost icons
-  "Information": "images/information.png",
-  "Avatar": "images/avatar.png",
-  "Raf": "images/raf.png",
-  "Codex": "images/codex.png",
-  "Slayer bxp": "images/slayer-bxp.png",
-  "Combat bxp": "images/combat-bxp.png",
-  "120 Slayer": "images/120-slayer.png",
-  "Scrimshaw of Sacrifice": "images/scrimshaw-of-sacrifice.png",
-  "Double xp": "images/double-xp.png",
+  // Skill icons
+  "Attack": "images/attack.png",
+  "Strength": "images/strength.png",
+  "Defence": "images/defence.png",
+  "Constitution": "images/constitution.png",
+  "Ranged": "images/ranged.png",
+  "Magic": "images/magic.png",
+  "Necromancy": "images/necromancy.png",
   "Slayer": "images/slayer.png",
-  "Off Task (GP/HR)": "images/off-task.png",
-  "Combat": "images/combat.png",
-  "Slayer Introspection": "images/slayer-introspection.png",
-  "Binding Contracts": "images/binding-contracts.png",
-  "Tetra Contracts": "images/tetra-contracts.png",
-  "Misc": "images/misc.png",
-
-  // Category icons
-  "Gemstone Dragons": "images/gemstone-dragons.png",
-  "Dragons": "images/dragons.png",
-  "Strykewyrms": "images/strykewyrms.png",
-  "Order of Ascension": "images/order-of-ascension.png",
-  "Lost Grove Creatures": "images/lost-grove-creatures.png",
-  "Demons": "images/demons.png",
 
   // Monster icons
   "Moss Golems": "images/moss-golems.png",
@@ -58,7 +42,7 @@ const IMAGES = {
   "Abyssal Lords": "images/abyssal-lords.png",
   "Abyssal Savages": "images/abyssal-savages.png",
   "Abyssal Beasts": "images/abyssal-beasts.png",
-  "Abyssal Beasts and Lords Combo": "images/abyssal-beasts.png",
+  "Abyssal Beasts and Lords Combo": "images/abyssal-lords.png",
   "Kal'gerion Demons": "images/kalgerion-demons.png",
   "Ripper Demons": "images/ripper-demons.png",
   "Greater Demons": "images/greater-demons.png",
@@ -91,6 +75,10 @@ const IMAGES = {
   "Elite Profane Scabarites": "images/elite-profane-scabarites.png",
 };
 
+// For cluster variants, use the base monster's image
+// Clusters use the same monster name so IMAGES[name] already works.
+// For combos, the highest slayer level monster image is used (set above).
+
 function getMonsterImage(name) {
-  return IMAGES[name] || IMAGES["Information"];
+  return IMAGES[name] || null;
 }

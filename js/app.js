@@ -28,6 +28,11 @@
     expandedTasks: new Set(),
     prefer: new Set(DEFAULT_PREFER),
     block: new Set(DEFAULT_BLOCK),
+    pinnedPrefer: new Set(),   // manually locked prefer tasks
+    pinnedBlock: new Set(),    // manually locked block tasks
+    skip: new Set(),           // always skip with points (excluded from averages)
+    autoPreferMetric: 'slayXpHr',
+    autoBlockMetric: 'slayXpHr',
     customKph: {},
     scrimshawMonsters: new Set(),
     persuadeUnlocks: new Set(), // which persuade tasks the player has unlocked
@@ -47,6 +52,11 @@
         if (typeof p.misc === 'number') state.misc = p.misc;
         if (p.prefer) state.prefer = new Set(p.prefer);
         if (p.block) state.block = new Set(p.block);
+        if (p.pinnedPrefer) state.pinnedPrefer = new Set(p.pinnedPrefer);
+        if (p.pinnedBlock) state.pinnedBlock = new Set(p.pinnedBlock);
+        if (p.skip) state.skip = new Set(p.skip);
+        if (p.autoPreferMetric !== undefined) state.autoPreferMetric = p.autoPreferMetric;
+        if (p.autoBlockMetric !== undefined) state.autoBlockMetric = p.autoBlockMetric;
         if (p.showClusters !== undefined) state.showClusters = p.showClusters;
         if (p.showBlocked !== undefined) state.showBlocked = p.showBlocked;
         if (p.taskView !== undefined) state.taskView = p.taskView;
@@ -65,6 +75,11 @@
         misc: state.misc,
         prefer: Array.from(state.prefer),
         block: Array.from(state.block),
+        pinnedPrefer: Array.from(state.pinnedPrefer),
+        pinnedBlock: Array.from(state.pinnedBlock),
+        skip: Array.from(state.skip),
+        autoPreferMetric: state.autoPreferMetric,
+        autoBlockMetric: state.autoBlockMetric,
         showClusters: state.showClusters,
         showBlocked: state.showBlocked,
         taskView: state.taskView,
@@ -777,7 +792,6 @@
   }
 
   // ── Prefer / Block List ────────────────────────────────────────────
-  // Get best monster stats for a category (for display in prefer/block chips)
   function getBestForCategory(catId, metric) {
     var cat = TASK_CATEGORIES.find(function (c) { return c.id === catId; });
     if (!cat) return 0;
@@ -785,7 +799,6 @@
     cat.monsters.forEach(function (mName) {
       MONSTERS.filter(function (m) { return m.name === mName && !m.cluster; }).forEach(function (m) {
         var computed = computeMonster(m);
-        // Skip locked monsters when finding best
         if (!computed._locked) {
           var val = computed[metric] || 0;
           if (val > best) best = val;
@@ -795,72 +808,194 @@
     return best;
   }
 
+  // Auto-fill: keeps pinned tasks, fills remaining slots by metric
+  function runAutoFill() {
+    var preferMetric = state.autoPreferMetric;
+    var blockMetric = state.autoBlockMetric;
+
+    // Compute scores for all categories
+    var metric = preferMetric || blockMetric || 'slayXpHr';
+    var scored = TASK_CATEGORIES.map(function (cat) {
+      return { id: cat.id, score: getBestForCategory(cat.id, metric) };
+    });
+
+    // Auto-fill prefer: keep pinned, fill rest by best metric
+    if (preferMetric) {
+      var preferScored = TASK_CATEGORIES.map(function (cat) {
+        return { id: cat.id, score: getBestForCategory(cat.id, preferMetric) };
+      });
+      preferScored.sort(function (a, b) { return b.score - a.score; });
+
+      var newPrefer = new Set(state.pinnedPrefer);
+      for (var i = 0; i < preferScored.length && newPrefer.size < MAX_PREFER; i++) {
+        var id = preferScored[i].id;
+        if (!newPrefer.has(id) && !state.block.has(id) && !state.skip.has(id) && preferScored[i].score > 0) {
+          newPrefer.add(id);
+        }
+      }
+      state.prefer = newPrefer;
+    }
+
+    // Auto-fill block: keep pinned, fill rest by worst metric
+    if (blockMetric) {
+      var blockScored = TASK_CATEGORIES.map(function (cat) {
+        return { id: cat.id, score: getBestForCategory(cat.id, blockMetric) };
+      });
+      blockScored.sort(function (a, b) { return a.score - b.score; });
+
+      var newBlock = new Set(state.pinnedBlock);
+      for (var j = 0; j < blockScored.length && newBlock.size < MAX_BLOCK; j++) {
+        var bid = blockScored[j].id;
+        if (!newBlock.has(bid) && !state.prefer.has(bid) && !state.skip.has(bid)) {
+          newBlock.add(bid);
+        }
+      }
+      state.block = newBlock;
+    }
+
+    saveState();
+    renderPrefBlock();
+    renderTasksTable();
+    updateWeightedAverage();
+  }
+
+  // Add task to prefer (pinned), evicting worst non-pinned if full
+  function pinPrefer(catId) {
+    if (state.block.has(catId)) { state.block.delete(catId); state.pinnedBlock.delete(catId); }
+    state.skip.delete(catId);
+    state.pinnedPrefer.add(catId);
+    state.prefer.add(catId);
+
+    // Evict worst non-pinned if over limit
+    if (state.prefer.size > MAX_PREFER) {
+      var metric = state.autoPreferMetric || 'slayXpHr';
+      var worst = null;
+      var worstScore = Infinity;
+      state.prefer.forEach(function (id) {
+        if (state.pinnedPrefer.has(id)) return;
+        var score = getBestForCategory(id, metric);
+        if (score < worstScore) { worstScore = score; worst = id; }
+      });
+      if (worst) state.prefer.delete(worst);
+    }
+    saveState();
+    runAutoFill();
+  }
+
+  // Add task to block (pinned), evicting worst non-pinned if full
+  function pinBlock(catId) {
+    if (state.prefer.has(catId)) { state.prefer.delete(catId); state.pinnedPrefer.delete(catId); }
+    state.skip.delete(catId);
+    state.pinnedBlock.add(catId);
+    state.block.add(catId);
+
+    if (state.block.size > MAX_BLOCK) {
+      var metric = state.autoBlockMetric || 'slayXpHr';
+      var worst = null;
+      var worstScore = -Infinity;
+      state.block.forEach(function (id) {
+        if (state.pinnedBlock.has(id)) return;
+        var score = getBestForCategory(id, metric);
+        if (score > worstScore) { worstScore = score; worst = id; }
+      });
+      if (worst) state.block.delete(worst);
+    }
+    saveState();
+    runAutoFill();
+  }
+
+  function unpinPrefer(catId) {
+    state.pinnedPrefer.delete(catId);
+    state.prefer.delete(catId);
+    saveState();
+    runAutoFill();
+  }
+
+  function unpinBlock(catId) {
+    state.pinnedBlock.delete(catId);
+    state.block.delete(catId);
+    saveState();
+    runAutoFill();
+  }
+
+  function toggleSkip(catId) {
+    if (state.skip.has(catId)) {
+      state.skip.delete(catId);
+    } else {
+      state.skip.add(catId);
+      // Remove from prefer/block if skipped
+      state.prefer.delete(catId); state.pinnedPrefer.delete(catId);
+      state.block.delete(catId); state.pinnedBlock.delete(catId);
+    }
+    saveState();
+    runAutoFill();
+  }
+
   function renderPrefBlock() {
     var preferList = document.getElementById('prefer-list');
     var blockList = document.getElementById('block-list');
     var unassignedList = document.getElementById('unassigned-list');
+    if (!preferList) return;
 
     preferList.innerHTML = '';
     blockList.innerHTML = '';
     unassignedList.innerHTML = '';
 
-    TASK_CATEGORIES.forEach(function (cat) {
-      var chip = document.createElement('div');
-      chip.className = 'task-chip';
+    var searchInput = document.getElementById('unassigned-search');
+    var searchQ = searchInput ? searchInput.value.toLowerCase() : '';
 
-      // Get best slay XP/hr for this category to display
+    TASK_CATEGORIES.forEach(function (cat) {
       var bestVal = getBestForCategory(cat.id, state.sortCol || 'slayXpHr');
       var statLabel = bestVal > 0 ? ' <span class="chip-stat">' + fmtShort(bestVal) + '</span>' : '';
+      var isPinned, chip;
 
       if (state.prefer.has(cat.id)) {
+        isPinned = state.pinnedPrefer.has(cat.id);
+        chip = document.createElement('div');
+        chip.className = 'task-chip';
         chip.innerHTML =
-          '<span>' + cat.label + statLabel + '</span>' +
+          '<span>' + cat.label + statLabel +
+            (isPinned ? '<span class="pin-icon" title="Manually pinned">\uD83D\uDD12</span>' : '') +
+          '</span>' +
           '<div class="chip-actions"><button class="chip-btn remove-btn" title="Remove">&times;</button></div>';
         chip.querySelector('.remove-btn').addEventListener('click', function (e) {
           e.stopPropagation();
-          state.prefer.delete(cat.id);
-          saveState();
-          renderPrefBlock();
-          renderTasksTable();
+          unpinPrefer(cat.id);
         });
         preferList.appendChild(chip);
+
       } else if (state.block.has(cat.id)) {
+        isPinned = state.pinnedBlock.has(cat.id);
+        chip = document.createElement('div');
+        chip.className = 'task-chip';
         chip.innerHTML =
-          '<span>' + cat.label + statLabel + '</span>' +
+          '<span>' + cat.label + statLabel +
+            (isPinned ? '<span class="pin-icon" title="Manually pinned">\uD83D\uDD12</span>' : '') +
+          '</span>' +
           '<div class="chip-actions"><button class="chip-btn remove-btn" title="Remove">&times;</button></div>';
         chip.querySelector('.remove-btn').addEventListener('click', function (e) {
           e.stopPropagation();
-          state.block.delete(cat.id);
-          saveState();
-          renderPrefBlock();
-          renderTasksTable();
+          unpinBlock(cat.id);
         });
         blockList.appendChild(chip);
+
       } else {
-        var preferFull = state.prefer.size >= MAX_PREFER;
-        var blockFull = state.block.size >= MAX_BLOCK;
+        // Unassigned
+        if (searchQ && cat.label.toLowerCase().indexOf(searchQ) === -1) return;
+
+        var isSkipped = state.skip.has(cat.id);
+        chip = document.createElement('div');
+        chip.className = 'task-chip' + (isSkipped ? ' skipped' : '');
         chip.innerHTML =
           '<span>' + cat.label + statLabel + '</span>' +
           '<div class="chip-actions">' +
-            '<button class="chip-btn prefer-btn' + (preferFull ? ' disabled' : '') + '" title="Prefer"' + (preferFull ? ' disabled' : '') + '>+</button>' +
-            '<button class="chip-btn block-btn' + (blockFull ? ' disabled' : '') + '" title="Block"' + (blockFull ? ' disabled' : '') + '>&minus;</button>' +
+            '<button class="chip-btn prefer-btn" title="Prefer (pin)">+</button>' +
+            '<button class="chip-btn block-btn" title="Block (pin)">&minus;</button>' +
+            '<button class="chip-btn skip-btn' + (isSkipped ? ' active' : '') + '" title="Always skip with Slayer points (excluded from averages)">Skip</button>' +
           '</div>';
-        chip.querySelector('.prefer-btn').addEventListener('click', function (e) {
-          e.stopPropagation();
-          if (state.prefer.size >= MAX_PREFER) return;
-          state.prefer.add(cat.id);
-          saveState();
-          renderPrefBlock();
-          renderTasksTable();
-        });
-        chip.querySelector('.block-btn').addEventListener('click', function (e) {
-          e.stopPropagation();
-          if (state.block.size >= MAX_BLOCK) return;
-          state.block.add(cat.id);
-          saveState();
-          renderPrefBlock();
-          renderTasksTable();
-        });
+        chip.querySelector('.prefer-btn').addEventListener('click', function (e) { e.stopPropagation(); pinPrefer(cat.id); });
+        chip.querySelector('.block-btn').addEventListener('click', function (e) { e.stopPropagation(); pinBlock(cat.id); });
+        chip.querySelector('.skip-btn').addEventListener('click', function (e) { e.stopPropagation(); toggleSkip(cat.id); });
         unassignedList.appendChild(chip);
       }
     });
@@ -869,89 +1004,249 @@
     document.getElementById('block-count').textContent = state.block.size;
   }
 
-  // ── Auto-fill ──────────────────────────────────────────────────────
-  function autoFillPrefer() {
-    var metric = document.getElementById('auto-prefer-metric').value;
-    if (!metric) return;
-    var scored = TASK_CATEGORIES.map(function (cat) {
-      return { id: cat.id, score: getBestForCategory(cat.id, metric) };
-    });
-    scored.sort(function (a, b) { return b.score - a.score; });
-    state.prefer = new Set();
-    var count = 0;
-    for (var i = 0; i < scored.length && count < MAX_PREFER; i++) {
-      if (!state.block.has(scored[i].id) && scored[i].score > 0) {
-        state.prefer.add(scored[i].id);
-        count++;
-      }
-    }
-    saveState();
-    renderPrefBlock();
-    renderTasksTable();
-  }
+  // ── Weighted Average XP/Hr ──────────────────────────────────────────
 
-  function autoFillBlock() {
-    var metric = document.getElementById('auto-block-metric').value;
-    if (!metric) return;
-    var scored = TASK_CATEGORIES.map(function (cat) {
-      return { id: cat.id, score: getBestForCategory(cat.id, metric) };
-    });
-    scored.sort(function (a, b) { return a.score - b.score; });
-    state.block = new Set();
-    var count = 0;
-    for (var i = 0; i < scored.length && count < MAX_BLOCK; i++) {
-      if (!state.prefer.has(scored[i].id)) {
-        state.block.add(scored[i].id);
-        count++;
+  // Map LANIAKEA_WEIGHTS keys → category IDs (handles name mismatches)
+  var WEIGHT_KEY_TO_CAT = {
+    "Lost Grove Creatures": "lost_grove",
+    "Acheron Mammoths": "acheron_mammoths",
+    "Elves": "elves",
+    "Shadow Creatures": "shadow_creatures",
+    "Nightmares": "nightmares",
+    "Lava Strykewyrms": "strykewyrms",
+    "Vile Blooms": "vile_blooms",
+    "Crystal Shapeshifters": "crystal_shapeshifters",
+    "Soul Devourers": "soul_devourers",
+    "Camel Warriors": "camel_warriors",
+    "Living Wyverns": "living_wyverns",
+    "Corrupted Workers": "corrupted_creatures",
+    "Soulgazers": "soulgazers",
+    "Creatures of Daemonheim": "daemonheim",
+    "Edimmus": "edimmus",
+    "Airuts": "airuts",
+    "Aviansies": "aviansies",
+    "Chaos Giants": "chaos_giants",
+    "Cresbots": "cresbots",
+    "Dagannoths": "dagannoths",
+    "Dark Beasts": "dark_beasts",
+    "Dinosaurs": "dinosaurs",
+    "Black Demons": "black_demons",
+    "Abyssal Demons": "abyssal_demons",
+    "Kal'gerion Demons": "kalgerion_demons",
+    "Ripper Demons": "ripper_demons",
+    "Greater Demons": "greater_demons",
+    "Black Dragons": "black_dragons",
+    "Celestial Dragons": "celestial_dragons",
+    "Rune Dragons": "rune_dragons",
+    "Adamant Dragons": "adamant_dragons",
+    "Gemstone Dragons": "gemstone_dragons",
+    "Nodon Dragonkin": "nodon",
+    "Ganodermic Creatures": "ganodermic",
+    "Gargoyles": "gargoyles",
+    "Ice Strykewyrms": "strykewyrms",
+    "Iron Dragons": "iron_dragons",
+    "Kalphites": "kalphites",
+    "Mithril Dragons": "mithril_dragons",
+    "Mutated Jadinkos": "jadinkos",
+    "Order of Ascension": "ascension",
+    "Steel Dragons": "steel_dragons",
+    "Vyrewatch": "vyrewatch",
+    "Profane Scabarites": "scabarites",
+  };
+
+  // Cluster tasks that span multiple categories (player picks best monster)
+  var CLUSTER_WEIGHT_CATS = {
+    "Demons": ["black_demons", "abyssal_demons", "kalgerion_demons", "ripper_demons", "greater_demons"],
+    "Dragons": ["black_dragons", "celestial_dragons", "rune_dragons", "adamant_dragons", "gemstone_dragons", "iron_dragons", "mithril_dragons", "steel_dragons", "nodon"],
+    "Strykewyrms": ["strykewyrms"],
+  };
+
+  function updateWeightedAverage() {
+    var bar = document.getElementById('weighted-avg-bar');
+    if (!bar) return;
+    if (typeof LANIAKEA_WEIGHTS === 'undefined') return;
+
+    var excludedSet = new Set();
+    state.block.forEach(function (id) { excludedSet.add(id); });
+    state.skip.forEach(function (id) { excludedSet.add(id); });
+
+    // Check if persuade tasks are unlocked
+    var persuadeSet = new Set(PERSUADE_TASKS);
+
+    // Build entries from each LANIAKEA_WEIGHTS key
+    var entries = [];
+    var totalWeight = 0;
+    var preferWeight = 0;
+
+    for (var wKey in LANIAKEA_WEIGHTS) {
+      var w = LANIAKEA_WEIGHTS[wKey];
+      var catId = WEIGHT_KEY_TO_CAT[wKey];
+      var clusterCats = CLUSTER_WEIGHT_CATS[wKey];
+
+      var slayXpHr = 0, combatXpHr = 0, gpHr = 0;
+      var isExcluded = false;
+      var isPreferred = false;
+
+      if (catId) {
+        // Single category mapping
+        if (excludedSet.has(catId)) { isExcluded = true; }
+        if (persuadeSet.has(catId) && !state.persuadeUnlocks.has(catId)) { isExcluded = true; }
+        if (!isExcluded) {
+          isPreferred = state.prefer.has(catId);
+          slayXpHr = getBestForCategory(catId, 'slayXpHr');
+          combatXpHr = getBestForCategory(catId, 'combatXpHr');
+          gpHr = getBestForCategory(catId, 'gpHr');
+        }
+      } else if (clusterCats) {
+        // Cluster: excluded only if ALL sub-categories are excluded/locked
+        var eligible = clusterCats.filter(function (id) {
+          if (excludedSet.has(id)) return false;
+          if (persuadeSet.has(id) && !state.persuadeUnlocks.has(id)) return false;
+          return true;
+        });
+        if (eligible.length === 0) { isExcluded = true; }
+        if (!isExcluded) {
+          // Use best XP/hr across eligible sub-categories
+          eligible.forEach(function (id) {
+            slayXpHr = Math.max(slayXpHr, getBestForCategory(id, 'slayXpHr'));
+            combatXpHr = Math.max(combatXpHr, getBestForCategory(id, 'combatXpHr'));
+            gpHr = Math.max(gpHr, getBestForCategory(id, 'gpHr'));
+          });
+        }
+      } else {
+        continue; // Unknown key, skip
       }
+
+      if (isExcluded) continue;
+
+      totalWeight += w;
+      if (isPreferred) preferWeight += w;
+      entries.push({ w: w, isPreferred: isPreferred, slayXpHr: slayXpHr, combatXpHr: combatXpHr, gpHr: gpHr });
     }
-    saveState();
-    renderPrefBlock();
-    renderTasksTable();
+
+    if (totalWeight === 0) {
+      bar.innerHTML = '<div class="avg-item"><span class="avg-label">No eligible tasks</span></div>';
+      return;
+    }
+
+    // Double-roll prefer mechanic (silent second roll):
+    //   P(preferred task i) = pi * (2 - Sp/S)
+    //   P(non-preferred task j) = pj * (1 - Sp/S)
+    // where pi = wi/S, Sp = sum of preferred weights, S = totalWeight
+    var spRatio = preferWeight / totalWeight;
+    var avgSlay = 0, avgCombat = 0, avgGp = 0;
+
+    entries.forEach(function (e) {
+      var basePct = e.w / totalWeight;
+      var pct = e.isPreferred ? basePct * (2 - spRatio) : basePct * (1 - spRatio);
+      avgSlay += pct * e.slayXpHr;
+      avgCombat += pct * e.combatXpHr;
+      avgGp += pct * e.gpHr;
+    });
+
+    bar.innerHTML =
+      '<div class="avg-item"><span class="avg-label">Weighted Avg Slay XP/Hr</span> <span class="avg-value">' + fmtShort(Math.round(avgSlay)) + '</span></div>' +
+      '<div class="avg-item"><span class="avg-label">Weighted Avg Combat XP/Hr</span> <span class="avg-value">' + fmtShort(Math.round(avgCombat)) + '</span></div>' +
+      '<div class="avg-item"><span class="avg-label">Weighted Avg GP/Hr</span> <span class="avg-value">' + fmtShort(Math.round(avgGp)) + '</span></div>';
   }
 
   // ── Persuade Toggles ──────────────────────────────────────────────
+  function togglePersuade(taskId) {
+    if (state.persuadeUnlocks.has(taskId)) {
+      state.persuadeUnlocks.delete(taskId);
+    } else {
+      state.persuadeUnlocks.add(taskId);
+    }
+    window._persuadeUnlocks = state.persuadeUnlocks;
+    saveState();
+    renderPersuadeToggles();
+    updateAll();
+  }
+
   function renderPersuadeToggles() {
+    // Home tab - full toggles
     var container = document.getElementById('persuade-toggles');
-    if (!container) return;
-    container.innerHTML = '';
+    if (container) {
+      container.innerHTML = '';
+      PERSUADE_TASKS.forEach(function (taskId) {
+        var cat = TASK_CATEGORIES.find(function (c) { return c.id === taskId; });
+        if (!cat) return;
 
-    PERSUADE_TASKS.forEach(function (taskId) {
-      var cat = TASK_CATEGORIES.find(function (c) { return c.id === taskId; });
-      if (!cat) return;
-
-      var unlocked = state.persuadeUnlocks.has(taskId);
-      var item = document.createElement('div');
-      item.className = 'boost-item' + (unlocked ? ' active' : '');
-      item.innerHTML =
-        '<div class="toggle"></div>' +
-        '<span class="label">' + cat.label + '</span>' +
-        '<span class="badge" style="font-size:0.65rem;color:var(--text-muted);">50 pts</span>';
-      item.addEventListener('click', function () {
-        if (unlocked) {
-          state.persuadeUnlocks.delete(taskId);
-        } else {
-          state.persuadeUnlocks.add(taskId);
-        }
-        unlocked = !unlocked;
-        item.classList.toggle('active', unlocked);
-        window._persuadeUnlocks = state.persuadeUnlocks;
-        saveState();
-        updateAll();
+        var unlocked = state.persuadeUnlocks.has(taskId);
+        var item = document.createElement('div');
+        item.className = 'boost-item' + (unlocked ? ' active' : '');
+        item.innerHTML =
+          '<div class="toggle"></div>' +
+          '<span class="label">' + cat.label + '</span>' +
+          '<span class="badge" style="font-size:0.65rem;color:var(--text-muted);">50 pts</span>';
+        item.addEventListener('click', function () { togglePersuade(taskId); });
+        container.appendChild(item);
       });
-      container.appendChild(item);
-    });
+    }
+
+    // Slayer Tasks tab - compact chips
+    var tasksBar = document.getElementById('persuade-toggles-tasks');
+    if (tasksBar) {
+      tasksBar.innerHTML = '';
+      PERSUADE_TASKS.forEach(function (taskId) {
+        var cat = TASK_CATEGORIES.find(function (c) { return c.id === taskId; });
+        if (!cat) return;
+
+        var unlocked = state.persuadeUnlocks.has(taskId);
+        var chip = document.createElement('div');
+        chip.className = 'persuade-chip' + (unlocked ? ' active' : '');
+        chip.innerHTML =
+          '<span class="persuade-dot"></span>' +
+          '<span>' + cat.label + '</span>';
+        chip.addEventListener('click', function () { togglePersuade(taskId); });
+        tasksBar.appendChild(chip);
+      });
+    }
   }
 
   function initPrefBlockControls() {
-    document.getElementById('auto-prefer-btn').addEventListener('click', autoFillPrefer);
-    document.getElementById('auto-block-btn').addEventListener('click', autoFillBlock);
+    var preferSel = document.getElementById('auto-prefer-metric');
+    var blockSel = document.getElementById('auto-block-metric');
+
+    if (preferSel) {
+      preferSel.value = state.autoPreferMetric || '';
+      preferSel.addEventListener('change', function () {
+        state.autoPreferMetric = preferSel.value;
+        saveState();
+        runAutoFill();
+      });
+    }
+
+    if (blockSel) {
+      blockSel.value = state.autoBlockMetric || '';
+      blockSel.addEventListener('change', function () {
+        state.autoBlockMetric = blockSel.value;
+        saveState();
+        runAutoFill();
+      });
+    }
+
+    var searchInput = document.getElementById('unassigned-search');
+    if (searchInput) {
+      searchInput.addEventListener('input', function () {
+        renderPrefBlock();
+      });
+    }
+
     document.getElementById('reset-prefs').addEventListener('click', function () {
       state.prefer = new Set(DEFAULT_PREFER);
       state.block = new Set(DEFAULT_BLOCK);
+      state.pinnedPrefer = new Set();
+      state.pinnedBlock = new Set();
+      state.skip = new Set();
+      state.autoPreferMetric = '';
+      state.autoBlockMetric = '';
+      if (preferSel) preferSel.value = '';
+      if (blockSel) blockSel.value = '';
       saveState();
       renderPrefBlock();
       renderTasksTable();
+      updateWeightedAverage();
     });
   }
 
@@ -976,6 +1271,7 @@
     updateStatsBar();
     renderTasksTable();
     renderPrefBlock();
+    updateWeightedAverage();
   }
 
   // ── Player Lookup Callback ─────────────────────────────────────────
@@ -996,6 +1292,7 @@
     renderPersuadeToggles();
     updateAll();
     renderChangelog();
+    if (typeof initPlayerLookup === 'function') initPlayerLookup();
     if (typeof initGoalsTab === 'function') initGoalsTab();
   }
 

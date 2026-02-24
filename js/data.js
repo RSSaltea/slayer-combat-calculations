@@ -216,6 +216,11 @@ const UNLOCK_REQUIREMENTS = {
   "Elves":                  { quests: ["Plague's End"] },
   "Shadow Creatures":       { quests: ["Plague's End"] },
   "Dagannoths":             { quests: ["Horror from the Deep"] },
+  // Dinosaurs
+  "Brutish Dinosaurs":      { slayerLevel: 99 },
+  "Venomous Dinosaurs":     { slayerLevel: 105 },
+  "Feral Dinosaurs":        { slayerLevel: 90 },
+  "Ripper Dinosaurs":       { slayerLevel: 114 },
   // Slayer level only
   "Moss Golems":            { slayerLevel: 104 },
   "Acheron Mammoths":       { slayerLevel: 96 },

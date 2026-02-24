@@ -48,9 +48,7 @@ const GOAL_SKILLS = [
   { id: 'defence', name: 'Defence', maxLevel: 99 },
   { id: 'constitution', name: 'Constitution', maxLevel: 99 },
   { id: 'ranged', name: 'Ranged', maxLevel: 99 },
-  { id: 'prayer', name: 'Prayer', maxLevel: 99 },
   { id: 'magic', name: 'Magic', maxLevel: 99 },
-  { id: 'summoning', name: 'Summoning', maxLevel: 99 },
   { id: 'necromancy', name: 'Necromancy', maxLevel: 120 },
   { id: 'slayer', name: 'Slayer', maxLevel: 120 },
 ];
@@ -211,22 +209,38 @@ var playerData = null;   // hiscores skills
 var playerQuests = null; // quest completion data
 var playerName = '';
 
+// All skills to display in the lookup stats grid
+var DISPLAY_SKILLS = [
+  { id: 'attack', name: 'Attack' },
+  { id: 'strength', name: 'Strength' },
+  { id: 'defence', name: 'Defence' },
+  { id: 'constitution', name: 'Constitution' },
+  { id: 'ranged', name: 'Ranged' },
+  { id: 'prayer', name: 'Prayer' },
+  { id: 'magic', name: 'Magic' },
+  { id: 'summoning', name: 'Summoning' },
+  { id: 'necromancy', name: 'Necromancy' },
+  { id: 'slayer', name: 'Slayer' },
+];
+
+// ── Player Lookup (Home tab) ──────────────────────────────────────
+function initPlayerLookup() {
+  var btn = document.getElementById('lookup-btn');
+  var nameInput = document.getElementById('player-name');
+  if (!btn || !nameInput) return;
+
+  btn.addEventListener('click', doLookup);
+  nameInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') doLookup();
+  });
+}
+
 // ── Goals Tab UI ───────────────────────────────────────────────────
 function initGoalsTab() {
   var container = document.getElementById('goals-content');
   if (!container) return;
 
   container.innerHTML =
-    '<div class="card" style="margin-bottom:1.5rem;">' +
-      '<h3 class="section-title" style="margin-bottom:1rem;">Player Lookup</h3>' +
-      '<div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">' +
-        '<input type="text" id="player-name" placeholder="Enter RuneScape name..." class="player-input">' +
-        '<button id="lookup-btn" class="lookup-btn">Look Up</button>' +
-        '<span id="lookup-status" style="font-size:0.8rem;color:var(--text-muted);"></span>' +
-      '</div>' +
-      '<div id="player-stats" style="margin-top:1rem;display:none;"></div>' +
-      '<div id="quest-status" style="margin-top:0.75rem;display:none;"></div>' +
-    '</div>' +
     '<div class="card" style="margin-bottom:1.5rem;">' +
       '<h3 class="section-title" style="margin-bottom:1rem;">Goal Calculator</h3>' +
       '<div class="goal-controls">' +
@@ -258,10 +272,6 @@ function initGoalsTab() {
     checksDiv.appendChild(label);
   });
 
-  document.getElementById('lookup-btn').addEventListener('click', doLookup);
-  document.getElementById('player-name').addEventListener('keydown', function (e) {
-    if (e.key === 'Enter') doLookup();
-  });
   document.getElementById('calc-btn').addEventListener('click', doCalculation);
 }
 
@@ -298,8 +308,8 @@ async function doLookup() {
       status.style.color = 'var(--green)';
 
       var html = '<div class="player-stats-grid">';
-      for (var i = 0; i < GOAL_SKILLS.length; i++) {
-        var skill = GOAL_SKILLS[i];
+      for (var i = 0; i < DISPLAY_SKILLS.length; i++) {
+        var skill = DISPLAY_SKILLS[i];
         var data = playerData[skill.id];
         if (data) {
           var img = (typeof IMAGES !== 'undefined' && IMAGES[skill.name])

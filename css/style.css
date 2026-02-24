@@ -73,11 +73,7 @@ body {
   text-shadow: 0 2px 8px rgba(201, 170, 88, 0.3);
 }
 
-.site-header .subtitle {
-  color: var(--text-muted);
-  font-size: 0.85rem;
-  margin-top: 0.25rem;
-}
+
 
 .site-header .version {
   position: absolute;
@@ -95,12 +91,16 @@ body {
 /* Navigation */
 .tab-nav {
   display: flex;
+  justify-content: center;
   gap: 0;
   background: var(--bg-secondary);
   border-bottom: 2px solid var(--border);
   padding: 0 2rem;
   overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
+.tab-nav::-webkit-scrollbar { display: none; }
 
 .tab-btn {
   background: none;
@@ -227,11 +227,13 @@ body {
 
 .boost-item.active .toggle::after {
   content: '';
+  display: block;
   width: 5px;
   height: 9px;
   border: solid var(--bg-primary);
   border-width: 0 2px 2px 0;
-  transform: rotate(45deg) translateY(-1px);
+  transform: rotate(45deg);
+  margin-top: -2px;
 }
 
 .boost-item .label {
@@ -1234,6 +1236,159 @@ body {
 .task-child-row td:first-child::before {
   content: '\2514\00a0';
   color: var(--text-muted);
+}
+
+/* ── Persuade Bar (Slayer Tasks tab) ─────────────────── */
+.persuade-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.persuade-bar-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.persuade-bar-toggles {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.persuade-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.65rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.2s;
+}
+
+.persuade-chip:hover {
+  border-color: var(--border-highlight);
+  color: var(--text-secondary);
+}
+
+.persuade-chip.active {
+  border-color: var(--gold-dim);
+  color: var(--gold);
+  background: rgba(201, 170, 88, 0.06);
+}
+
+.persuade-chip .persuade-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--red-dim);
+  transition: background 0.2s;
+}
+
+.persuade-chip.active .persuade-dot {
+  background: var(--green);
+}
+
+/* ── Weighted Average Bar ────────────────────────────── */
+.weighted-avg-bar {
+  display: flex;
+  gap: 1.5rem;
+  padding: 0.75rem 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.weighted-avg-bar .avg-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+}
+
+.weighted-avg-bar .avg-label {
+  color: var(--text-muted);
+}
+
+.weighted-avg-bar .avg-value {
+  color: var(--gold-bright);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Unassigned search ──────────────────────────────── */
+.unassigned-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.unassigned-search {
+  width: 120px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-primary);
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-family: inherit;
+}
+
+.unassigned-search:focus {
+  outline: none;
+  border-color: var(--gold-dim);
+}
+
+/* ── Pinned lock icon ───────────────────────────────── */
+.pin-icon {
+  font-size: 0.7rem;
+  color: var(--gold-dim);
+  margin-left: 0.35rem;
+  cursor: help;
+}
+
+/* ── Skip chip ──────────────────────────────────────── */
+.chip-btn.skip-btn {
+  background: rgba(144, 96, 192, 0.15);
+  color: var(--purple);
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  width: auto;
+  padding: 0 0.4rem;
+}
+
+.chip-btn.skip-btn:hover {
+  background: rgba(144, 96, 192, 0.3);
+}
+
+.chip-btn.skip-btn.active {
+  background: var(--purple);
+  color: #fff;
+}
+
+.task-chip.skipped {
+  opacity: 0.5;
+  text-decoration: line-through;
+  text-decoration-color: var(--purple);
 }
 
 /* ── Disabled chip buttons ───────────────────────────── */

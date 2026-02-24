@@ -12,7 +12,6 @@
   <!-- Header -->
   <header class="site-header">
     <h1>Slayer & Combat Calculations</h1>
-    <p class="subtitle">by .saltea &middot; contributors: mionee, roarroar</p>
     <span class="version">v2.0</span>
   </header>
 
@@ -30,6 +29,17 @@
 
     <!-- HOME TAB -->
     <div id="tab-home" class="tab-panel active">
+
+      <h2 class="section-title">Player Lookup</h2>
+      <div class="card" style="margin-bottom:1.5rem;">
+        <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">
+          <input type="text" id="player-name" placeholder="Enter RuneScape name..." class="player-input">
+          <button id="lookup-btn" class="lookup-btn">Look Up</button>
+          <span id="lookup-status" style="font-size:0.8rem;color:var(--text-muted);"></span>
+        </div>
+        <div id="player-stats" style="margin-top:1rem;display:none;"></div>
+        <div id="quest-status" style="margin-top:0.75rem;display:none;"></div>
+      </div>
 
       <h2 class="section-title">Toggles / Boosts</h2>
       <div id="boosts-grid" class="boosts-grid"></div>
@@ -91,6 +101,11 @@
         </div>
       </div>
 
+      <div class="persuade-bar">
+        <span class="persuade-bar-label">Persuade Unlocks:</span>
+        <div id="persuade-toggles-tasks" class="persuade-bar-toggles"></div>
+      </div>
+
       <div class="data-table-wrap">
         <table class="data-table" id="tasks-table">
           <thead>
@@ -116,38 +131,37 @@
     <div id="tab-prefblock" class="tab-panel">
 
       <h2 class="section-title">Prefer / Block List</h2>
-      <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:1.5rem;">
-        Assign creatures to your Prefer or Block list (max 8 each). Blocked creatures are hidden from the Slayer Tasks tab. Preferred creatures are highlighted.
-        Click <strong>+</strong> to prefer or <strong>&minus;</strong> to block. Use the <strong>&times;</strong> button to remove assignments.
+      <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:1rem;">
+        Max 8 each. Manually pinned tasks (lock icon) stay when auto-fill changes. Use <strong>Skip</strong> to always skip a task with points (excluded from averages).
       </p>
 
       <div class="pref-block-controls">
         <div class="auto-fill-group">
-          <label>Auto-fill Prefer by:</label>
+          <label>Prefer by:</label>
           <select id="auto-prefer-metric" class="focus-select">
-            <option value="">-- Select --</option>
+            <option value="">Manual only</option>
             <option value="slayXpHr">Best Slay XP/Hr</option>
             <option value="combatXpHr">Best Combat XP/Hr</option>
             <option value="gpHr">Best GP/Hr</option>
             <option value="gpTask">Best GP/Task</option>
             <option value="slayXpTask">Best Slay XP/Task</option>
           </select>
-          <button id="auto-prefer-btn" class="lookup-btn" style="padding:0.4rem 0.8rem;font-size:0.8rem;">Auto-fill</button>
         </div>
         <div class="auto-fill-group">
-          <label>Auto-fill Block by:</label>
+          <label>Block by:</label>
           <select id="auto-block-metric" class="focus-select">
-            <option value="">-- Select --</option>
+            <option value="">Manual only</option>
             <option value="slayXpHr">Worst Slay XP/Hr</option>
             <option value="combatXpHr">Worst Combat XP/Hr</option>
             <option value="gpHr">Worst GP/Hr</option>
             <option value="gpTask">Worst GP/Task</option>
             <option value="slayXpTask">Worst Slay XP/Task</option>
           </select>
-          <button id="auto-block-btn" class="lookup-btn" style="padding:0.4rem 0.8rem;font-size:0.8rem;">Auto-fill</button>
         </div>
-        <button id="reset-prefs" class="toggle-clusters-btn">Reset to Defaults</button>
+        <button id="reset-prefs" class="toggle-clusters-btn">Reset All</button>
       </div>
+
+      <div id="weighted-avg-bar" class="weighted-avg-bar"></div>
 
       <div class="pref-block-layout">
         <div class="pref-block-col prefer-col">
@@ -156,7 +170,10 @@
         </div>
 
         <div class="pref-block-col unassigned-col" style="min-width:250px;">
-          <div class="col-header">Unassigned</div>
+          <div class="col-header unassigned-header">
+            Unassigned
+            <input type="text" id="unassigned-search" class="unassigned-search" placeholder="Search...">
+          </div>
           <div class="task-list" id="unassigned-list"></div>
         </div>
 
@@ -197,7 +214,7 @@
 
   <!-- Footer -->
   <footer class="site-footer">
-    <p>Slayer & Combat Calculations v2.0 &middot; Created by .saltea &middot; Data by the community</p>
+    <p>Slayer & Combat Calculations v2.0 &middot; Data by the community</p>
   </footer>
 
   <script src="js/data.js"></script>
