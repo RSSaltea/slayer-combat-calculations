@@ -1,145 +1,257 @@
-// Slayer & Combat Calculations - Monster Data
+// Slayer & Combat Calculations - Monster Base Data
 // Based on spreadsheet v1.4 by .saltea
 // Contributors: mionee, roarroar
+//
+// All values are BASE (unboosted). Computed values derived at runtime.
+// kph = kills per hour, baseSlayXp/baseCombatXp = XP per kill, avgKills = average kills per task
 
 const MONSTERS = [
-  { name: "Moss Golems", location: "Lost Grove", slayXpHr: 2654190, combatXpHr: 1836450, gpHr: 49692024.7, gpTask: 5521336.1, slayXpTask: 294910, combatXpTask: 204050, minsTask: 6.7, category: "lost_grove" },
-  { name: "Living Wyverns", location: "", slayXpHr: 1589236, combatXpHr: 906300, gpHr: 49185707.1, gpTask: 2912311.6, slayXpTask: 94099.5, combatXpTask: 53662.5, minsTask: 3.6, category: "wyverns" },
-  { name: "Lava Strykewyrms", location: "", slayXpHr: 1097772, combatXpHr: 826800, gpHr: 39213104.2, gpTask: 6786883.4, slayXpTask: 189999, combatXpTask: 143100, minsTask: 10.4, category: "strykewyrms" },
-  { name: "Lava Strykewyrms", location: "", slayXpHr: 1097772, combatXpHr: 826800, gpHr: 39213104.2, gpTask: 9463931.9, slayXpTask: 264943.1, combatXpTask: 199545, minsTask: 14.5, category: "strykewyrms", cluster: "Strykewyrms" },
-  { name: "Glacors", location: "", slayXpHr: 427120, combatXpHr: 424000, gpHr: 33653976.6, gpTask: 12199566.5, slayXpTask: 154831, combatXpTask: 153700, minsTask: 21.8, category: "glacors" },
-  { name: "Nightmares", location: "", slayXpHr: 1542600, combatXpHr: 1669500, gpHr: 29230889.6, gpTask: 4222239.6, slayXpTask: 222820, combatXpTask: 241150, minsTask: 8.7, category: "nightmares" },
-  { name: "Ganodermic Beasts", location: "", slayXpHr: 816660, combatXpHr: 861250, gpHr: 28714005.7, gpTask: 2153550.4, slayXpTask: 61249.5, combatXpTask: 64593.8, minsTask: 4.5, category: "ganodermic" },
-  { name: "Profane Scabarites", location: "", slayXpHr: 851445, combatXpHr: 1419075, gpHr: 28017070.8, gpTask: 3296126, slayXpTask: 100170, combatXpTask: 166950, minsTask: 7.1, category: "scabarites" },
-  { name: "Ripper Demons", location: "", slayXpHr: 5149470, combatXpHr: 3023960, gpHr: 27175816.1, gpTask: 1039075.3, slayXpTask: 196891.5, combatXpTask: 115622, minsTask: 2.3, category: "demons" },
-  { name: "Ripper Demons", location: "", slayXpHr: 5149470, combatXpHr: 3023960, gpHr: 27175816.1, gpTask: 2006214.7, slayXpTask: 380152.1, combatXpTask: 223239.4, minsTask: 4.4, category: "demons", cluster: "Demon" },
-  { name: "Abyssal Beasts and Lords Combo", location: "", slayXpHr: 4968218.7, combatXpHr: 3891127.5, gpHr: 24309395.7, gpTask: 2737631.8, slayXpTask: 559501.9, combatXpTask: 438204, minsTask: 6.8, category: "demons" },
-  { name: "Abyssal Beasts and Lords Combo", location: "", slayXpHr: 4968218.7, combatXpHr: 3891127.5, gpHr: 24309395.7, gpTask: 1430154.4, slayXpTask: 292287, combatXpTask: 228920.3, minsTask: 3.5, category: "demons", cluster: "Demon" },
-  { name: "Abyssal Lords", location: "", slayXpHr: 2658024, combatXpHr: 1137380, gpHr: 20735670.6, gpTask: 3432111, slayXpTask: 439948.8, combatXpTask: 188256, minsTask: 9.9, category: "demons" },
-  { name: "Abyssal Lords", location: "", slayXpHr: 2658024, combatXpHr: 1137380, gpHr: 20735670.6, gpTask: 1787557.8, slayXpTask: 229140, combatXpTask: 98050, minsTask: 5.2, category: "demons", cluster: "Demon" },
-  { name: "Cresbots", location: "", slayXpHr: 451425, combatXpHr: 689000, gpHr: 20463435.8, gpTask: 2833398.8, slayXpTask: 62505, combatXpTask: 95400, minsTask: 8.3, category: "cresbots" },
-  { name: "Acheron Mammoths", location: "", slayXpHr: 1514587.5, combatXpHr: 1006162.5, gpHr: 19163200, gpTask: 2299584, slayXpTask: 181750.5, combatXpTask: 120739.5, minsTask: 7.2, category: "mammoths" },
-  { name: "Airuts", location: "", slayXpHr: 921771, combatXpHr: 925600.5, gpHr: 18692800.2, gpTask: 2980011.6, slayXpTask: 146949, combatXpTask: 147559.5, minsTask: 9.6, category: "airuts" },
-  { name: "Abyssal Beasts", location: "", slayXpHr: 1450890, combatXpHr: 1860300, gpHr: 18381839.4, gpTask: 4901823.8, slayXpTask: 386904, combatXpTask: 496080, minsTask: 16, category: "demons" },
-  { name: "Abyssal Beasts", location: "", slayXpHr: 1450890, combatXpHr: 1860300, gpHr: 18381839.4, gpTask: 2563245.4, slayXpTask: 202318.6, combatXpTask: 259408.5, minsTask: 8.4, category: "demons", cluster: "Demon" },
-  { name: "Rune Dragons", location: "", slayXpHr: 456560, combatXpHr: 723460, gpHr: 18053910.1, gpTask: 5596712.1, slayXpTask: 141533.6, combatXpTask: 224272.6, minsTask: 18.6, category: "dragons" },
-  { name: "Rune Dragons", location: "", slayXpHr: 456560, combatXpHr: 723460, gpHr: 18053910.1, gpTask: 11328828.6, slayXpTask: 286491.4, combatXpTask: 453971.2, minsTask: 37.7, category: "dragons", cluster: "Dragon" },
-  { name: "Crystal Shapeshifters", location: "", slayXpHr: 989310, combatXpHr: 1113000, gpHr: 13894549.1, gpTask: 2580416.3, slayXpTask: 183729, combatXpTask: 206700, minsTask: 11.1, category: "shapeshifters" },
-  { name: "Capsarius", location: "", slayXpHr: 293760, combatXpHr: 357840, gpHr: 13449868.9, gpTask: 1008740.2, slayXpTask: 22032, combatXpTask: 26838, minsTask: 4.5, category: "ascension" },
-  { name: "Abyssal Demons", location: "", slayXpHr: 928200, combatXpHr: 1351500, gpHr: 13157817.5, gpTask: 1052625.4, slayXpTask: 74256, combatXpTask: 108120, minsTask: 4.8, category: "demons" },
-  { name: "Abyssal Demons", location: "", slayXpHr: 928200, combatXpHr: 1351500, gpHr: 13157817.5, gpTask: 550435.4, slayXpTask: 38829.7, combatXpTask: 56537.8, minsTask: 2.5, category: "demons", cluster: "Demon" },
-  { name: "Nihils", location: "", slayXpHr: 495962, combatXpHr: 837400, gpHr: 12062337.9, gpTask: 1221502.6, slayXpTask: 50224, combatXpTask: 84800, minsTask: 6.1, category: "nihils" },
-  { name: "Soulgazers", location: "", slayXpHr: 911736, combatXpHr: 890400, gpHr: 11996178.1, gpTask: 3570291.1, slayXpTask: 271350, combatXpTask: 265000, minsTask: 17.9, category: "soulgazers" },
-  { name: "Creatures of Daemonheim", location: "", slayXpHr: 868320, combatXpHr: 848000, gpHr: 11424931.5, gpTask: 3598853.4, slayXpTask: 273520.8, combatXpTask: 267120, minsTask: 18.9, category: "daemonheim" },
-  { name: "Adamant Dragons", location: "", slayXpHr: 306474, combatXpHr: 730380, gpHr: 11111034, gpTask: 1322742.1, slayXpTask: 36485, combatXpTask: 86950, minsTask: 7.1, category: "dragons" },
-  { name: "Adamant Dragons", location: "", slayXpHr: 306474, combatXpHr: 730380, gpHr: 11111034, gpTask: 3320082.8, slayXpTask: 91577.4, combatXpTask: 218244.5, minsTask: 17.9, category: "dragons", cluster: "Dragon" },
-  { name: "Venomous Dinosaurs", location: "", slayXpHr: 889800, combatXpHr: 1113000, gpHr: 11010555.7, gpTask: 1651583.4, slayXpTask: 133470, combatXpTask: 166950, minsTask: 9, category: "dinosaurs" },
-  { name: "Glacytes", location: "", slayXpHr: 681912, combatXpHr: 816200, gpHr: 10644356.8, gpTask: 250557.1, slayXpTask: 16051.5, combatXpTask: 19212.5, minsTask: 1.4, category: "glacors" },
-  { name: "Edimmus", location: "", slayXpHr: 573124.5, combatXpHr: 992160, gpHr: 10363927.6, gpTask: 3862113.2, slayXpTask: 213574.6, combatXpTask: 369728, minsTask: 22.4, category: "edimmus" },
-  { name: "Elite Profane Scabarites", location: "", slayXpHr: 631080, combatXpHr: 1057350, gpHr: 9888377.9, gpTask: 3296126, slayXpTask: 210360, combatXpTask: 352450, minsTask: 20, category: "scabarites" },
-  { name: "Camel Warriors", location: "", slayXpHr: 1592310, combatXpHr: 319980, gpHr: 9868385, gpTask: 1480257.8, slayXpTask: 238846.5, combatXpTask: 47997, minsTask: 9, category: "camels" },
-  { name: "Corrupted Workers", location: "", slayXpHr: 762413.2, combatXpHr: 833955, gpHr: 9686380.3, gpTask: 1846783.7, slayXpTask: 145360, combatXpTask: 159000, minsTask: 11.4, category: "workers" },
-  { name: "Chaos Giants", location: "", slayXpHr: 465480, combatXpHr: 536625, gpHr: 9208840.2, gpTask: 2046408.9, slayXpTask: 103440, combatXpTask: 119250, minsTask: 13.3, category: "giants" },
-  { name: "Celestial Dragons", location: "", slayXpHr: 706550, combatXpHr: 783770, gpHr: 8644092.1, gpTask: 2194269.5, slayXpTask: 179355, combatXpTask: 198957, minsTask: 15.2, category: "dragons" },
-  { name: "Nodon Dragonkin", location: "", slayXpHr: 1075776, combatXpHr: 826800, gpHr: 7887445.1, gpTask: 1971861.3, slayXpTask: 268944, combatXpTask: 206700, minsTask: 15, category: "dragons" },
-  { name: "Mithril Dragons", location: "", slayXpHr: 458586, combatXpHr: 688682, gpHr: 7649301.7, gpTask: 419139.8, slayXpTask: 25128, combatXpTask: 37736, minsTask: 3.3, category: "dragons" },
-  { name: "Kal'gerion Demons", location: "", slayXpHr: 899928, combatXpHr: 518737.5, gpHr: 7471569.4, gpTask: 1545841.9, slayXpTask: 186192, combatXpTask: 107325, minsTask: 12.4, category: "demons" },
-  { name: "Kal'gerion Demons", location: "", slayXpHr: 899928, combatXpHr: 518737.5, gpHr: 7471569.4, gpTask: 2155590.7, slayXpTask: 259634.4, combatXpTask: 149658.8, minsTask: 17.3, category: "demons", cluster: "Demon" },
-  { name: "Dragonstone Dragons", location: "", slayXpHr: 644840, combatXpHr: 848000, gpHr: 7464616.7, gpTask: 1959461.9, slayXpTask: 169270.5, combatXpTask: 222600, minsTask: 15.8, category: "dragons" },
-  { name: "Dragonstone Dragons", location: "", slayXpHr: 644840, combatXpHr: 848000, gpHr: 7464616.7, gpTask: 2342023.5, slayXpTask: 202318.6, combatXpTask: 266060, minsTask: 18.8, category: "dragons", cluster: "Dragon" },
-  { name: "Dark Beasts", location: "", slayXpHr: 394800, combatXpHr: 540600, gpHr: 6986842.4, gpTask: 1397368.5, slayXpTask: 78960, combatXpTask: 108120, minsTask: 12, category: "dark_beasts" },
-  { name: "Feral Dinosaurs", location: "", slayXpHr: 604230, combatXpHr: 715500, gpHr: 6800800.8, gpTask: 2040240.2, slayXpTask: 181269, combatXpTask: 214650, minsTask: 18, category: "dinosaurs" },
-  { name: "Rorarius", location: "", slayXpHr: 155800, combatXpHr: 318000, gpHr: 6484449.2, gpTask: 875400.6, slayXpTask: 21033, combatXpTask: 42930, minsTask: 8.1, category: "ascension" },
-  { name: "Iron Dragons", location: "", slayXpHr: 157075.2, combatXpHr: 228960, gpHr: 6259439.8, gpTask: 1113876, slayXpTask: 27951.8, combatXpTask: 40743.8, minsTask: 10.7, category: "dragons" },
-  { name: "Nodon Dragonkin", location: "", slayXpHr: 848208, combatXpHr: 651900, gpHr: 6218947.1, gpTask: 1903604.5, slayXpTask: 259634.4, combatXpTask: 199545, minsTask: 18.4, category: "dragons", cluster: "Dragon" },
-  { name: "Onyx Dragons", location: "", slayXpHr: 827520, combatXpHr: 1060000, gpHr: 5948847.2, gpTask: 1561572.4, slayXpTask: 217224, combatXpTask: 278250, minsTask: 15.8, category: "dragons" },
-  { name: "Onyx Dragons", location: "", slayXpHr: 827520, combatXpHr: 1060000, gpHr: 5948847.2, gpTask: 1866450.8, slayXpTask: 259634.4, combatXpTask: 332575, minsTask: 18.8, category: "dragons", cluster: "Dragon" },
-  { name: "Elves", location: "", slayXpHr: 1178811.4, combatXpHr: 923260, gpHr: 5768971.4, gpTask: 546429.6, slayXpTask: 111655.5, combatXpTask: 87450, minsTask: 5.7, category: "elves" },
-  { name: "Celestial Dragons", location: "", slayXpHr: 434800, combatXpHr: 482320, gpHr: 5319441.3, gpTask: 1668974.7, slayXpTask: 136418.5, combatXpTask: 151327.9, minsTask: 18.8, category: "dragons", cluster: "Dragon" },
-  { name: "Muspahs", location: "", slayXpHr: 365400, combatXpHr: 793940, gpHr: 5030941.3, gpTask: 1185864.7, slayXpTask: 86130, combatXpTask: 187143, minsTask: 14.1, category: "muspahs" },
-  { name: "Gargoyles", location: "", slayXpHr: 219700, combatXpHr: 355100, gpHr: 4723907.3, gpTask: 1133737.7, slayXpTask: 52728, combatXpTask: 85224, minsTask: 14.4, category: "gargoyles" },
-  { name: "Ice Strykewyrms", location: "", slayXpHr: 347175, combatXpHr: 596250, gpHr: 4488249, gpTask: 1795299.6, slayXpTask: 138870, combatXpTask: 238500, minsTask: 24, category: "strykewyrms" },
-  { name: "Ice Strykewyrms", location: "", slayXpHr: 347175, combatXpHr: 596250, gpHr: 4488249, gpTask: 1251722.8, slayXpTask: 96823.3, combatXpTask: 166287.5, minsTask: 16.7, category: "strykewyrms", cluster: "Strykewyrms" },
-  { name: "Hydrix Dragons", location: "", slayXpHr: 1857695, combatXpHr: 1113000, gpHr: 4282975.6, gpTask: 1284892.7, slayXpTask: 557308.5, combatXpTask: 333900, minsTask: 18, category: "dragons" },
-  { name: "Hydrix Dragons", location: "", slayXpHr: 1857695, combatXpHr: 1113000, gpHr: 4282975.6, gpTask: 1535752.7, slayXpTask: 666116.4, combatXpTask: 399090, minsTask: 21.5, category: "dragons", cluster: "Dragon" },
-  { name: "Ripper Dinosaurs", location: "", slayXpHr: 42380, combatXpHr: 689000, gpHr: 3768878.5, gpTask: 1695995.3, slayXpTask: 19071, combatXpTask: 310050, minsTask: 27, category: "dinosaurs" },
-  { name: "Steel Dragons", location: "", slayXpHr: 214280, combatXpHr: 291500, gpHr: 3762587.1, gpTask: 598593.4, slayXpTask: 34090, combatXpTask: 46375, minsTask: 9.5, category: "dragons" },
-  { name: "Brutish Dinosaurs", location: "", slayXpHr: 689920, combatXpHr: 742000, gpHr: 3646991.4, gpTask: 1641146.1, slayXpTask: 310464, combatXpTask: 333900, minsTask: 27, category: "dinosaurs" },
-  { name: "Shadow Creatures", location: "", slayXpHr: 1013712, combatXpHr: 779100, gpHr: 3508635.2, gpTask: 447530, slayXpTask: 129300, combatXpTask: 99375, minsTask: 7.7, category: "shadow" },
-  { name: "Crocodile Akhs", location: "", slayXpHr: 905656.8, combatXpHr: 1019826, gpHr: 2426405.8, gpTask: 453958, slayXpTask: 169440, combatXpTask: 190800, minsTask: 11.2, category: "akhs" },
-  { name: "Black Dragons", location: "", slayXpHr: 163620, combatXpHr: 222600, gpHr: 1726930.5, gpTask: 230257.4, slayXpTask: 21816, combatXpTask: 29680, minsTask: 8, category: "dragons" },
-  { name: "Black Dragons", location: "", slayXpHr: 163620, combatXpHr: 222600, gpHr: 1726930.5, gpTask: 361216.3, slayXpTask: 34223.9, combatXpTask: 46560.5, minsTask: 12.6, category: "dragons", cluster: "Dragon" },
-  { name: "Ash Lord Greater Demons", location: "", slayXpHr: 734580, combatXpHr: 874500, gpHr: 1521122.2, gpTask: 304224.4, slayXpTask: 146916, combatXpTask: 174900, minsTask: 12, category: "demons" },
-  { name: "Ash Lord Greater Demons", location: "", slayXpHr: 734580, combatXpHr: 874500, gpHr: 1521122.2, gpTask: 159084, slayXpTask: 76824.8, combatXpTask: 91458.1, minsTask: 6.3, category: "demons", cluster: "Demon" },
-  { name: "Tormented Demons", location: "", slayXpHr: 252880, combatXpHr: 212000, gpHr: 1392209.9, gpTask: 435065.6, slayXpTask: 79025, combatXpTask: 66250, minsTask: 18.8, category: "demons" },
-  { name: "Tormented Demons", location: "", slayXpHr: 252880, combatXpHr: 212000, gpHr: 1392209.9, gpTask: 873611.7, slayXpTask: 158682.2, combatXpTask: 133030, minsTask: 37.7, category: "demons", cluster: "Demon" },
-  { name: "Greater Demons", location: "", slayXpHr: 113025, combatXpHr: 238500, gpHr: 1116320.6, gpTask: 357222.6, slayXpTask: 36168, combatXpTask: 76320, minsTask: 19.2, category: "demons" },
-  { name: "Greater Demons", location: "", slayXpHr: 113025, combatXpHr: 238500, gpHr: 1116320.6, gpTask: 186797.6, slayXpTask: 18912.9, combatXpTask: 39909, minsTask: 10, category: "demons", cluster: "Demon" },
-  { name: "Aquanites", location: "", slayXpHr: 80444, combatXpHr: 126140, gpHr: 997723.2, gpTask: 639716.7, slayXpTask: 51578.8, combatXpTask: 80878, minsTask: 38.5, category: "aquanites" },
-  { name: "Black Demons", location: "", slayXpHr: 196620, combatXpHr: 286200, gpHr: 801418.4, gpTask: 353959.8, slayXpTask: 86840.5, combatXpTask: 126405, minsTask: 26.5, category: "demons" },
-  { name: "Black Demons", location: "", slayXpHr: 196620, combatXpHr: 286200, gpHr: 801418.4, gpTask: 167630, slayXpTask: 41126.4, combatXpTask: 59863.5, minsTask: 12.6, category: "demons", cluster: "Demon" },
-  { name: "Vile Blooms", location: "", slayXpHr: 1486240, combatXpHr: 1272000, gpHr: 685115, gpTask: 154150.9, slayXpTask: 334404, combatXpTask: 286200, minsTask: 13.5, category: "vile_blooms" },
-  { name: "Aviansies", location: "", slayXpHr: 94850, combatXpHr: 260650, gpHr: 636214.8, gpTask: 209950.9, slayXpTask: 31300.5, combatXpTask: 86014.5, minsTask: 19.8, category: "aviansies" },
-  { name: "Dagannoths", location: "", slayXpHr: 193130, combatXpHr: 455080, gpHr: 337762.7, gpTask: 26966.5, slayXpTask: 15419.3, combatXpTask: 36333, minsTask: 4.8, category: "dagannoths" },
-  { name: "Mutated Jadinkos", location: "", slayXpHr: 271561.2, combatXpHr: 370152, gpHr: 145873.6, gpTask: 28823.8, slayXpTask: 53659, combatXpTask: 73140, minsTask: 11.9, category: "jadinkos" },
-  { name: "Abyssal Savages", location: "", slayXpHr: 791280, combatXpHr: 1335600, gpHr: 0, gpTask: 0, slayXpTask: 113040, combatXpTask: 190800, minsTask: 8.6, category: "demons" },
-  { name: "Abyssal Savages", location: "", slayXpHr: 791280, combatXpHr: 1335600, gpHr: 0, gpTask: 0, slayXpTask: 59110.5, combatXpTask: 99772.5, minsTask: 4.5, category: "demons", cluster: "Demon" },
-  { name: "Kalphites", location: "", slayXpHr: 91029.6, combatXpHr: 179352, gpHr: 0, gpTask: 0, slayXpTask: 40753.5, combatXpTask: 80295, minsTask: 26.9, category: "kalphites" },
-  { name: "Vyrewatch", location: "", slayXpHr: 60424, combatXpHr: 148824, gpHr: 0, gpTask: 0, slayXpTask: 7727.3, combatXpTask: 19032.3, minsTask: 7.7, category: "vyrewatch" },
+  // Lost Grove
+  { name: "Moss Golems", kph: 990, baseSlayXp: 2408.8, baseCombatXp: 1750, maxTask: 120, avgKills: 110, category: "lost_grove" },
+  // Mammoths
+  { name: "Acheron Mammoths", kph: 375, baseSlayXp: 3628.8, baseCombatXp: 2531.2, maxTask: 55, avgKills: 45, category: "mammoths" },
+  // Elves
+  { name: "Elves", kph: 1742, baseSlayXp: 608.0, baseCombatXp: 500.0, maxTask: 180, avgKills: 165, category: "elves" },
+  // Shadow
+  { name: "Shadow Creatures", kph: 980, baseSlayXp: 929.4, baseCombatXp: 750.0, maxTask: 150, avgKills: 125, category: "shadow" },
+  // Nightmares
+  { name: "Nightmares", kph: 900, baseSlayXp: 1540.0, baseCombatXp: 1750.0, maxTask: 162, avgKills: 130, category: "nightmares" },
+  // Strykewyrms
+  { name: "Lava Strykewyrms", kph: 520, baseSlayXp: 1896.8, baseCombatXp: 1500.0, maxTask: 120, avgKills: 90, category: "strykewyrms" },
+  { name: "Lava Strykewyrms", kph: 520, baseSlayXp: 1896.8, baseCombatXp: 1500.0, maxTask: 150, avgKills: 126, category: "strykewyrms", cluster: "Strykewyrms" },
+  { name: "Ice Strykewyrms", kph: 450, baseSlayXp: 693.2, baseCombatXp: 1250.0, maxTask: 240, avgKills: 180, category: "strykewyrms" },
+  { name: "Ice Strykewyrms", kph: 450, baseSlayXp: 693.2, baseCombatXp: 1250.0, maxTask: 150, avgKills: 126, category: "strykewyrms", cluster: "Strykewyrms" },
+  // Vile Blooms
+  { name: "Vile Blooms", kph: 400, baseSlayXp: 3338.4, baseCombatXp: 3000.0, maxTask: 110, avgKills: 90, category: "vile_blooms" },
+  // Shapeshifters
+  { name: "Crystal Shapeshifters", kph: 700, baseSlayXp: 1269.8, baseCombatXp: 1500.0, maxTask: 150, avgKills: 130, category: "shapeshifters" },
+  // Akhs
+  { name: "Crocodile Akhs", kph: 1069, baseSlayXp: 761.2, baseCombatXp: 900.0, maxTask: 250, avgKills: 200, category: "akhs" },
+  // Camels
+  { name: "Camel Warriors", kph: 300, baseSlayXp: 4768.8, baseCombatXp: 1006.2, maxTask: 55, avgKills: 45, category: "camels" },
+  // Wyverns
+  { name: "Living Wyverns", kph: 760, baseSlayXp: 1878.8, baseCombatXp: 1125.0, maxTask: 65, avgKills: 45, category: "wyverns" },
+  // Workers
+  { name: "Corrupted Workers", kph: 1049, baseSlayXp: 653.0, baseCombatXp: 750.0, maxTask: 250, avgKills: 200, category: "workers" },
+  // Soulgazers
+  { name: "Soulgazers", kph: 420, baseSlayXp: 1950.4, baseCombatXp: 2000.0, maxTask: 190, avgKills: 125, category: "soulgazers" },
+  // Daemonheim
+  { name: "Creatures of Daemonheim", kph: 400, baseSlayXp: 1950.4, baseCombatXp: 2000.0, maxTask: 150, avgKills: 126, category: "daemonheim" },
+  // Edimmus
+  { name: "Edimmus", kph: 585, baseSlayXp: 880.2, baseCombatXp: 1600.0, maxTask: 265, avgKills: 218, category: "edimmus" },
+  // Airuts
+  { name: "Airuts", kph: 1035, baseSlayXp: 800.2, baseCombatXp: 843.7, maxTask: 180, avgKills: 165, category: "airuts" },
+  // Aquanites
+  { name: "Aquanites", kph: 340, baseSlayXp: 212.6, baseCombatXp: 350.0, maxTask: 240, avgKills: 218, category: "aquanites" },
+  // Aviansies
+  { name: "Aviansies", kph: 500, baseSlayXp: 170.4, baseCombatXp: 491.8, maxTask: 180, avgKills: 165, category: "aviansies" },
+  // Giants
+  { name: "Chaos Giants", kph: 450, baseSlayXp: 929.4, baseCombatXp: 1125.0, maxTask: 120, avgKills: 100, category: "giants" },
+  // Cresbots
+  { name: "Cresbots", kph: 650, baseSlayXp: 624.0, baseCombatXp: 1000.0, maxTask: 100, avgKills: 90, category: "cresbots" },
+  // Dagannoths
+  { name: "Dagannoths", kph: 3100, baseSlayXp: 56.0, baseCombatXp: 138.5, maxTask: 290, avgKills: 248, category: "dagannoths" },
+  // Dark Beasts
+  { name: "Dark Beasts", kph: 1200, baseSlayXp: 295.6, baseCombatXp: 425.0, maxTask: 300, avgKills: 240, category: "dark_beasts" },
+  // Dinosaurs
+  { name: "Brutish Dinosaurs", kph: 200, baseSlayXp: 3099.4, baseCombatXp: 3500.0, maxTask: 110, avgKills: 90, category: "dinosaurs" },
+  { name: "Feral Dinosaurs", kph: 300, baseSlayXp: 1809.6, baseCombatXp: 2250.0, maxTask: 110, avgKills: 90, category: "dinosaurs" },
+  { name: "Venomous Dinosaurs", kph: 600, baseSlayXp: 1332.4, baseCombatXp: 1750.0, maxTask: 110, avgKills: 90, category: "dinosaurs" },
+  { name: "Ripper Dinosaurs", kph: 200, baseSlayXp: 190.4, baseCombatXp: 3250.0, maxTask: 110, avgKills: 90, category: "dinosaurs" },
+  // Demons
+  { name: "Black Demons", kph: 600, baseSlayXp: 294.4, baseCombatXp: 450.0, maxTask: 300, avgKills: 265, category: "demons" },
+  { name: "Black Demons", kph: 600, baseSlayXp: 294.4, baseCombatXp: 450.0, maxTask: 150, avgKills: 126, category: "demons", cluster: "Demon" },
+  { name: "Abyssal Demons", kph: 3000, baseSlayXp: 278.0, baseCombatXp: 425.0, maxTask: 300, avgKills: 240, category: "demons" },
+  { name: "Abyssal Demons", kph: 3000, baseSlayXp: 278.0, baseCombatXp: 425.0, maxTask: 150, avgKills: 126, category: "demons", cluster: "Demon" },
+  { name: "Abyssal Lords", kph: 290, baseSlayXp: 8235.0, baseCombatXp: 3700.0, maxTask: 60, avgKills: 48, category: "demons" },
+  { name: "Abyssal Lords", kph: 290, baseSlayXp: 8235.0, baseCombatXp: 3700.0, maxTask: 30, avgKills: 25, category: "demons", cluster: "Demon" },
+  { name: "Abyssal Savages", kph: 1680, baseSlayXp: 423.2, baseCombatXp: 750.0, maxTask: 300, avgKills: 240, category: "demons" },
+  { name: "Abyssal Savages", kph: 1680, baseSlayXp: 423.2, baseCombatXp: 750.0, maxTask: 150, avgKills: 126, category: "demons", cluster: "Demon" },
+  { name: "Abyssal Beasts", kph: 900, baseSlayXp: 1448.4, baseCombatXp: 1950.0, maxTask: 300, avgKills: 240, category: "demons" },
+  { name: "Abyssal Beasts", kph: 900, baseSlayXp: 1448.4, baseCombatXp: 1950.0, maxTask: 150, avgKills: 126, category: "demons", cluster: "Demon" },
+  { name: "Abyssal Beasts and Lords Combo", kph: 753, baseSlayXp: 5928.0, baseCombatXp: 4875.0, maxTask: 106, avgKills: 85, category: "demons" },
+  { name: "Abyssal Beasts and Lords Combo", kph: 753, baseSlayXp: 5928.0, baseCombatXp: 4875.0, maxTask: 53, avgKills: 44, category: "demons", cluster: "Demon" },
+  { name: "Kal'gerion Demons", kph: 435, baseSlayXp: 1858.8, baseCombatXp: 1125.0, maxTask: 120, avgKills: 90, category: "demons" },
+  { name: "Kal'gerion Demons", kph: 435, baseSlayXp: 1858.8, baseCombatXp: 1125.0, maxTask: 150, avgKills: 126, category: "demons", cluster: "Demon" },
+  { name: "Ripper Demons", kph: 1700, baseSlayXp: 2721.6, baseCombatXp: 1678.0, maxTask: 85, avgKills: 65, category: "demons" },
+  { name: "Ripper Demons", kph: 1700, baseSlayXp: 2721.6, baseCombatXp: 1678.0, maxTask: 150, avgKills: 126, category: "demons", cluster: "Demon" },
+  { name: "Greater Demons", kph: 750, baseSlayXp: 135.4, baseCombatXp: 300.0, maxTask: 300, avgKills: 240, category: "demons" },
+  { name: "Greater Demons", kph: 750, baseSlayXp: 135.4, baseCombatXp: 300.0, maxTask: 150, avgKills: 126, category: "demons", cluster: "Demon" },
+  { name: "Ash Lord Greater Demons", kph: 150, baseSlayXp: 4400.0, baseCombatXp: 5500.0, maxTask: 38, avgKills: 30, category: "demons" },
+  { name: "Ash Lord Greater Demons", kph: 150, baseSlayXp: 4400.0, baseCombatXp: 5500.0, maxTask: 19, avgKills: 16, category: "demons", cluster: "Demon" },
+  { name: "Tormented Demons", kph: 200, baseSlayXp: 1136.0, baseCombatXp: 1000.0, maxTask: 75, avgKills: 63, category: "demons" },
+  { name: "Tormented Demons", kph: 200, baseSlayXp: 1136.0, baseCombatXp: 1000.0, maxTask: 150, avgKills: 126, category: "demons", cluster: "Demon" },
+  // Dragons
+  { name: "Black Dragons", kph: 600, baseSlayXp: 245.0, baseCombatXp: 350.0, maxTask: 110, avgKills: 80, category: "dragons" },
+  { name: "Black Dragons", kph: 600, baseSlayXp: 245.0, baseCombatXp: 350.0, maxTask: 150, avgKills: 126, category: "dragons", cluster: "Dragon" },
+  { name: "Celestial Dragons", kph: 650, baseSlayXp: 976.6, baseCombatXp: 1137.5, maxTask: 180, avgKills: 165, category: "dragons" },
+  { name: "Celestial Dragons", kph: 400, baseSlayXp: 976.6, baseCombatXp: 1137.5, maxTask: 150, avgKills: 126, category: "dragons", cluster: "Dragon" },
+  { name: "Rune Dragons", kph: 200, baseSlayXp: 2051.0, baseCombatXp: 3412.5, maxTask: 75, avgKills: 62, category: "dragons" },
+  { name: "Rune Dragons", kph: 200, baseSlayXp: 2051.0, baseCombatXp: 3412.5, maxTask: 150, avgKills: 126, category: "dragons", cluster: "Dragon" },
+  { name: "Adamant Dragons", kph: 420, baseSlayXp: 655.6, baseCombatXp: 1640.6, maxTask: 60, avgKills: 50, category: "dragons" },
+  { name: "Adamant Dragons", kph: 420, baseSlayXp: 655.6, baseCombatXp: 1640.6, maxTask: 150, avgKills: 126, category: "dragons", cluster: "Dragon" },
+  { name: "Hydrix Dragons", kph: 350, baseSlayXp: 4768.8, baseCombatXp: 3000.0, maxTask: 130, avgKills: 105, category: "dragons" },
+  { name: "Hydrix Dragons", kph: 350, baseSlayXp: 4768.8, baseCombatXp: 3000.0, maxTask: 150, avgKills: 126, category: "dragons", cluster: "Dragon" },
+  { name: "Nodon Dragonkin", kph: 520, baseSlayXp: 1858.8, baseCombatXp: 1500.0, maxTask: 150, avgKills: 130, category: "dragons" },
+  { name: "Nodon Dragonkin", kph: 410, baseSlayXp: 1858.8, baseCombatXp: 1500.0, maxTask: 150, avgKills: 126, category: "dragons", cluster: "Dragon" },
+  { name: "Onyx Dragons", kph: 400, baseSlayXp: 1858.8, baseCombatXp: 2500.0, maxTask: 130, avgKills: 105, category: "dragons" },
+  { name: "Onyx Dragons", kph: 400, baseSlayXp: 1858.8, baseCombatXp: 2500.0, maxTask: 150, avgKills: 126, category: "dragons", cluster: "Dragon" },
+  { name: "Dragonstone Dragons", kph: 400, baseSlayXp: 1448.4, baseCombatXp: 2000.0, maxTask: 130, avgKills: 105, category: "dragons" },
+  { name: "Dragonstone Dragons", kph: 400, baseSlayXp: 1448.4, baseCombatXp: 2000.0, maxTask: 150, avgKills: 126, category: "dragons", cluster: "Dragon" },
+  { name: "Iron Dragons", kph: 576, baseSlayXp: 245.0, baseCombatXp: 375.0, maxTask: 130, avgKills: 103, category: "dragons" },
+  { name: "Mithril Dragons", kph: 730, baseSlayXp: 564.4, baseCombatXp: 890.0, maxTask: 50, avgKills: 40, category: "dragons" },
+  { name: "Steel Dragons", kph: 550, baseSlayXp: 350.0, baseCombatXp: 500.0, maxTask: 125, avgKills: 88, category: "dragons" },
+  // Ganodermic
+  { name: "Ganodermic Beasts", kph: 1300, baseSlayXp: 564.4, baseCombatXp: 625.0, maxTask: 110, avgKills: 98, category: "ganodermic" },
+  // Gargoyles
+  { name: "Gargoyles", kph: 1000, baseSlayXp: 197.4, baseCombatXp: 335.0, maxTask: 300, avgKills: 240, category: "gargoyles" },
+  // Glacors
+  { name: "Glacors", kph: 200, baseSlayXp: 1918.8, baseCombatXp: 2000.0, maxTask: 85, avgKills: 73, category: "glacors" },
+  { name: "Glacytes", kph: 3080, baseSlayXp: 198.9, baseCombatXp: 250.0, maxTask: 85, avgKills: 73, category: "glacors" },
+  // Kalphites
+  { name: "Kalphites", kph: 564, baseSlayXp: 145.0, baseCombatXp: 300.0, maxTask: 300, avgKills: 253, category: "kalphites" },
+  // Muspahs
+  { name: "Muspahs", kph: 700, baseSlayXp: 469.0, baseCombatXp: 1070.0, maxTask: 180, avgKills: 165, category: "muspahs" },
+  // Jadinkos
+  { name: "Mutated Jadinkos", kph: 1164, baseSlayXp: 209.6, baseCombatXp: 300.0, maxTask: 265, avgKills: 230, category: "jadinkos" },
+  // Nihils
+  { name: "Nihils", kph: 790, baseSlayXp: 564.1, baseCombatXp: 1000.0, maxTask: 110, avgKills: 80, category: "nihils" },
+  // Ascension
+  { name: "Rorarius", kph: 1000, baseSlayXp: 140.0, baseCombatXp: 300.0, maxTask: 150, avgKills: 135, category: "ascension" },
+  { name: "Capsarius", kph: 1800, baseSlayXp: 146.6, baseCombatXp: 187.5, maxTask: 150, avgKills: 135, category: "ascension" },
+  // Vyrewatch
+  { name: "Vyrewatch", kph: 1040, baseSlayXp: 52.2, baseCombatXp: 135.0, maxTask: 155, avgKills: 133, category: "vyrewatch" },
+  // Scabarites
+  { name: "Profane Scabarites", kph: 850, baseSlayXp: 900.0, baseCombatXp: 1575.0, maxTask: 120, avgKills: 100, category: "scabarites" },
+  { name: "Elite Profane Scabarites", kph: 300, baseSlayXp: 1890.0, baseCombatXp: 3325.0, maxTask: 120, avgKills: 100, category: "scabarites" },
 ];
 
-// Prefer/Block list options - these are the assignable task categories
+// Slayer task categories - uses actual Laniakea task assignment names
+// Each entry = one task Laniakea can assign. monsters[] = which MONSTERS entries count for it.
+// Prefer/block list shows these labels (no duplicates). Stats shown = best monster in group.
 const TASK_CATEGORIES = [
-  { id: "ripper_demons", label: "Ripper Demons", monsters: ["Ripper Demons"] },
   { id: "abyssal_demons", label: "Abyssal Demons", monsters: ["Abyssal Demons", "Abyssal Beasts", "Abyssal Lords", "Abyssal Beasts and Lords Combo", "Abyssal Savages"] },
-  { id: "demons", label: "Demons", monsters: ["Kal'gerion Demons", "Greater Demons", "Black Demons", "Tormented Demons", "Ash Lord Greater Demons"] },
-  { id: "lost_grove", label: "Lost Grove Creatures", monsters: ["Moss Golems"] },
-  { id: "camel_warriors", label: "Camel Warriors", monsters: ["Camel Warriors"] },
-  { id: "living_wyverns", label: "Living Wyverns", monsters: ["Living Wyverns"] },
-  { id: "nightmares", label: "Nightmares", monsters: ["Nightmares"] },
   { id: "acheron_mammoths", label: "Acheron Mammoths", monsters: ["Acheron Mammoths"] },
-  { id: "dinosaurs", label: "Dinosaurs", monsters: ["Brutish Dinosaurs", "Venomous Dinosaurs", "Feral Dinosaurs", "Ripper Dinosaurs"] },
-  { id: "vyrewatch", label: "Vyrewatch", monsters: ["Vyrewatch"] },
-  { id: "kalphites", label: "Kalphites", monsters: ["Kalphites"] },
-  { id: "aviansies", label: "Aviansies", monsters: ["Aviansies"] },
-  { id: "ascension", label: "Order of Ascension", monsters: ["Capsarius", "Rorarius"] },
-  { id: "iron_dragons", label: "Iron Dragons", monsters: ["Iron Dragons"] },
-  { id: "black_dragons", label: "Black Dragons", monsters: ["Black Dragons"] },
-  { id: "dagannoths", label: "Dagannoths", monsters: ["Dagannoths"] },
-  { id: "strykewyrms", label: "Strykewyrms", monsters: ["Lava Strykewyrms", "Ice Strykewyrms"] },
-  { id: "crystal_shapeshifters", label: "Crystal Shapeshifters", monsters: ["Crystal Shapeshifters"] },
-  { id: "elves", label: "Elves", monsters: ["Elves"] },
-  { id: "shadow_creatures", label: "Shadow Creatures", monsters: ["Shadow Creatures"] },
-  { id: "edimmus", label: "Edimmus", monsters: ["Edimmus"] },
-  { id: "soulgazers", label: "Soulgazers", monsters: ["Soulgazers"] },
-  { id: "corrupted_workers", label: "Corrupted Workers", monsters: ["Corrupted Workers"] },
-  { id: "crocodile_akhs", label: "Crocodile Akhs", monsters: ["Crocodile Akhs"] },
-  { id: "vile_blooms", label: "Vile Blooms", monsters: ["Vile Blooms"] },
-  { id: "glacors", label: "Glacors", monsters: ["Glacors", "Glacytes"] },
-  { id: "rune_dragons", label: "Rune Dragons", monsters: ["Rune Dragons"] },
-  { id: "celestial_dragons", label: "Celestial Dragons", monsters: ["Celestial Dragons"] },
-  { id: "hydrix_dragons", label: "Hydrix Dragons", monsters: ["Hydrix Dragons"] },
-  { id: "dark_beasts", label: "Dark Beasts", monsters: ["Dark Beasts"] },
-  { id: "gargoyles", label: "Gargoyles", monsters: ["Gargoyles"] },
+  { id: "adamant_dragons", label: "Adamant Dragons", monsters: ["Adamant Dragons"] },
   { id: "airuts", label: "Airuts", monsters: ["Airuts"] },
-  { id: "muspahs", label: "Muspahs", monsters: ["Muspahs"] },
-  { id: "scabarites", label: "Profane Scabarites", monsters: ["Profane Scabarites", "Elite Profane Scabarites"] },
-  { id: "nodon", label: "Nodon Dragonkin", monsters: ["Nodon Dragonkin"] },
-  { id: "chaos_giants", label: "Chaos Giants", monsters: ["Chaos Giants"] },
-  { id: "cresbots", label: "Cresbots", monsters: ["Cresbots"] },
-  { id: "nihils", label: "Nihils", monsters: ["Nihils"] },
-  { id: "daemonheim", label: "Creatures of Daemonheim", monsters: ["Creatures of Daemonheim"] },
-  { id: "ganodermic", label: "Ganodermic Beasts", monsters: ["Ganodermic Beasts"] },
-  { id: "jadinkos", label: "Mutated Jadinkos", monsters: ["Mutated Jadinkos"] },
   { id: "aquanites", label: "Aquanites", monsters: ["Aquanites"] },
+  { id: "ascension", label: "Order of Ascension", monsters: ["Capsarius", "Rorarius"] },
+  { id: "aviansies", label: "Aviansies", monsters: ["Aviansies"] },
+  { id: "black_demons", label: "Black Demons", monsters: ["Black Demons"] },
+  { id: "black_dragons", label: "Black Dragons", monsters: ["Black Dragons"] },
+  { id: "camel_warriors", label: "Camel Warriors", monsters: ["Camel Warriors"] },
+  { id: "celestial_dragons", label: "Celestial Dragons", monsters: ["Celestial Dragons"] },
+  { id: "chaos_giants", label: "Chaos Giants", monsters: ["Chaos Giants"] },
+  { id: "corrupted_creatures", label: "Corrupted Creatures", monsters: ["Corrupted Workers"] },
+  { id: "cresbots", label: "Cres's Creations", monsters: ["Cresbots"] },
+  { id: "crystal_shapeshifters", label: "Crystal Shapeshifters", monsters: ["Crystal Shapeshifters"] },
+  { id: "daemonheim", label: "Creatures of Daemonheim", monsters: ["Creatures of Daemonheim"] },
+  { id: "dagannoths", label: "Dagannoths", monsters: ["Dagannoths"] },
+  { id: "dark_beasts", label: "Dark Beasts", monsters: ["Dark Beasts"] },
+  { id: "dinosaurs", label: "Dinosaurs", monsters: ["Brutish Dinosaurs", "Venomous Dinosaurs", "Feral Dinosaurs", "Ripper Dinosaurs"] },
+  { id: "edimmus", label: "Edimmus", monsters: ["Edimmus"] },
+  { id: "elves", label: "Elves", monsters: ["Elves"] },
+  { id: "ganodermic", label: "Ganodermic Creatures", monsters: ["Ganodermic Beasts"] },
+  { id: "gargoyles", label: "Gargoyles", monsters: ["Gargoyles"] },
+  { id: "gemstone_dragons", label: "Gemstone Dragons", monsters: ["Hydrix Dragons", "Onyx Dragons", "Dragonstone Dragons"] },
+  { id: "glacors", label: "Glacors", monsters: ["Glacors", "Glacytes"] },
+  { id: "greater_demons", label: "Greater Demons", monsters: ["Greater Demons", "Ash Lord Greater Demons"] },
+  { id: "iron_dragons", label: "Iron Dragons", monsters: ["Iron Dragons"] },
+  { id: "jadinkos", label: "Mutated Jadinkos", monsters: ["Mutated Jadinkos"] },
+  { id: "kalgerion_demons", label: "Kal'gerion Demons", monsters: ["Kal'gerion Demons"] },
+  { id: "kalphites", label: "Kalphites", monsters: ["Kalphites"] },
+  { id: "living_wyverns", label: "Living Wyverns", monsters: ["Living Wyverns"] },
+  { id: "lost_grove", label: "Lost Grove Creatures", monsters: ["Moss Golems"] },
+  { id: "mithril_dragons", label: "Mithril Dragons", monsters: ["Mithril Dragons"] },
+  { id: "muspahs", label: "Muspahs", monsters: ["Muspahs"] },
+  { id: "nightmares", label: "Nightmare Creatures", monsters: ["Nightmares"] },
+  { id: "nihils", label: "Nihils", monsters: ["Nihils"] },
+  { id: "nodon", label: "Nodon Dragonkin", monsters: ["Nodon Dragonkin"] },
+  { id: "scabarites", label: "Profane Scabarites", monsters: ["Profane Scabarites", "Elite Profane Scabarites"] },
+  { id: "ripper_demons", label: "Ripper Demons", monsters: ["Ripper Demons"] },
+  { id: "rune_dragons", label: "Rune Dragons", monsters: ["Rune Dragons"] },
+  { id: "shadow_creatures", label: "Shadow Creatures", monsters: ["Shadow Creatures"] },
+  { id: "soul_devourers", label: "Soul Devourers", monsters: ["Crocodile Akhs"] },
+  { id: "soulgazers", label: "Soulgazers", monsters: ["Soulgazers"] },
+  { id: "steel_dragons", label: "Steel Dragons", monsters: ["Steel Dragons"] },
+  { id: "strykewyrms", label: "Strykewyrms", monsters: ["Lava Strykewyrms", "Ice Strykewyrms"] },
+  { id: "tormented_demons", label: "Tormented Demons", monsters: ["Tormented Demons"] },
+  { id: "vile_blooms", label: "Vile Blooms", monsters: ["Vile Blooms"] },
+  { id: "vyrewatch", label: "Vyrewatch", monsters: ["Vyrewatch"] },
 ];
 
 // Default prefer/block from the spreadsheet
-const DEFAULT_PREFER = ["ripper_demons", "abyssal_demons", "demons", "lost_grove", "camel_warriors", "living_wyverns", "nightmares", "acheron_mammoths"];
+const DEFAULT_PREFER = ["ripper_demons", "abyssal_demons", "lost_grove", "camel_warriors", "living_wyverns", "nightmares", "acheron_mammoths", "greater_demons"];
 const DEFAULT_BLOCK = ["dinosaurs", "vyrewatch", "kalphites", "aviansies", "ascension", "iron_dragons", "black_dragons", "dagannoths"];
+
+// Max prefer/block slots
+const MAX_PREFER = 8;
+const MAX_BLOCK = 8;
+
+// Unlock requirements for slayer tasks
+// quests: RuneMetrics API quest titles that must be COMPLETED
+// slayerLevel: minimum slayer level
+// persuade: requires buying "Persuade" unlock from Slayer shop (50 pts)
+const UNLOCK_REQUIREMENTS = {
+  // Persuade unlocks (cost 50 Slayer reward points each)
+  "Nightmares":             { quests: ["Children of Mah"], persuade: true },
+  "Glacors":                { quests: ["Ritual of the Mahjarrat"], persuade: true },
+  "Glacytes":               { quests: ["Ritual of the Mahjarrat"], persuade: true },
+  "Nihils":                 { quests: ["Fate of the Gods"], slayerLevel: 76, persuade: true },
+  "Muspahs":                { quests: ["Fate of the Gods"], slayerLevel: 76, persuade: true },
+  "Tormented Demons":       { quests: ["While Guthix Sleeps"], persuade: true },
+  "Aquanites":              { slayerLevel: 78, persuade: true },
+  // Quest-locked tasks
+  "Crystal Shapeshifters":  { quests: ["The Light Within"], slayerLevel: 75 },
+  "Celestial Dragons":      { quests: ["One of a Kind"] },
+  "Rune Dragons":           { quests: ["Fate of the Gods", "Ritual of the Mahjarrat"] },
+  "Chaos Giants":           { quests: ["Birthright of the Dwarves"] },
+  "Cresbots":               { quests: ["The World Wakes"], slayerLevel: 67 },
+  "Vyrewatch":              { quests: ["The Branches of Darkmeyer"] },
+  "Mithril Dragons":        { quests: ["Barbarian Training"] },
+  "Corrupted Workers":      { quests: ["Icthlarin's Little Helper"], slayerLevel: 88 },
+  "Crocodile Akhs":         { quests: ["Icthlarin's Little Helper"], slayerLevel: 105 },
+  "Edimmus":                { quests: ["Plague's End"], slayerLevel: 90 },
+  "Nodon Dragonkin":        { slayerLevel: 92 },
+  "Elves":                  { quests: ["Plague's End"] },
+  "Shadow Creatures":       { quests: ["Plague's End"] },
+  "Dagannoths":             { quests: ["Horror from the Deep"] },
+  // Slayer level only
+  "Moss Golems":            { slayerLevel: 104 },
+  "Acheron Mammoths":       { slayerLevel: 96 },
+  "Lava Strykewyrms":       { slayerLevel: 94 },
+  "Ice Strykewyrms":        { slayerLevel: 93 },
+  "Vile Blooms":            { slayerLevel: 90 },
+  "Camel Warriors":         { slayerLevel: 96 },
+  "Living Wyverns":         { slayerLevel: 96 },
+  "Soulgazers":             { slayerLevel: 99 },
+  "Airuts":                 { slayerLevel: 92 },
+  "Dark Beasts":            { slayerLevel: 90 },
+  "Abyssal Demons":         { slayerLevel: 85 },
+  "Abyssal Lords":          { slayerLevel: 115 },
+  "Abyssal Savages":        { slayerLevel: 95 },
+  "Abyssal Beasts":         { slayerLevel: 105 },
+  "Abyssal Beasts and Lords Combo": { slayerLevel: 105 },
+  "Kal'gerion Demons":      { slayerLevel: 90 },
+  "Ripper Demons":          { slayerLevel: 96 },
+  "Ganodermic Beasts":      { slayerLevel: 95 },
+  "Gargoyles":              { slayerLevel: 75 },
+  "Mutated Jadinkos":       { slayerLevel: 80 },
+  "Rorarius":               { slayerLevel: 81 },
+  "Capsarius":              { slayerLevel: 81 },
+  "Hydrix Dragons":         { slayerLevel: 101 },
+  "Onyx Dragons":           { slayerLevel: 95 },
+  "Dragonstone Dragons":    { slayerLevel: 95 },
+  "Profane Scabarites":     { slayerLevel: 87 },
+  "Elite Profane Scabarites": { slayerLevel: 87 },
+};
+
+// Persuade task IDs (map to TASK_CATEGORIES ids)
+const PERSUADE_TASKS = ["aquanites", "muspahs", "nihils", "glacors", "tormented_demons", "nightmares"];
 
 // Changelog data
 const CHANGELOG = [
+  { date: "24/02/2026", version: "2.0", note: "Major rewrite: base data, editable KPH, merged tabs, per-monster scrimshaw, prefer/block auto-fill.", change: "Restructured to GitHub Pages site" },
   { date: "01/09/2025", version: "1.3.5", note: "KPHs given by Joshua B", change: "Updated KPH of all monsters" },
   { date: "28/03/2025", version: "1.3", note: "Necromancy release changed a lot of base XP, this has been updated to reflect it.", change: "Updated the XP of all the monsters" },
   { date: "15/03/2025", version: "1.2", note: "No notes.", change: "Reworked a lot of GPData to make it easier to add in future" },

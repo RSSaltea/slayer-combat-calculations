@@ -1,0 +1,100 @@
+name: Update GP Data & Deploy
+
+on:
+  schedule:
+    - cron: '0 */12 * * *'  # Every 12 hours
+  workflow_dispatch:  # Manual trigger
+  push:
+    branches: ["main"]
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  update-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fetch GP Data from Google Sheets
+        run: |
+          # Download the GPData sheet as CSV
+          curl -L -s "https://docs.google.com/spreadsheets/d/1-HSin-Tqwbc1ZJHNcz9jg2xs6XMPu56dKyMFgYV-sYc/export?format=csv&gid=563958993" -o gpdata_raw.csv
+
+          # Parse and generate gpdata.js using Python
+          python3 << 'PYEOF'
+          import csv, json
+          from datetime import datetime, timezone
+
+          with open('gpdata_raw.csv', 'r', encoding='utf-8') as f:
+              reader = csv.reader(f)
+              rows = list(reader)
+
+          results = {}
+          for row in rows:
+              if len(row) > 6 and row[3].strip() and row[3].strip() not in ['', 'Creature Name', 'Drop Calculator', 'End result', 'Range (quantity)', 'Drop rate']:
+                  name = row[3].strip()
+                  try:
+                      on_task = float(row[4].strip().replace(',','')) if row[4].strip() else 0
+                      off_task = float(row[5].strip().replace(',','')) if row[5].strip() else 0
+                      contracts = float(row[6].strip().replace(',','')) if row[6].strip() else 0
+                      # Skip non-creature entries (numbers)
+                      if any(c.isalpha() for c in name):
+                          results[name] = {
+                              'onTask': round(on_task, 2),
+                              'offTask': round(off_task, 2),
+                              'contracts': round(contracts, 2)
+                          }
+                  except (ValueError, IndexError):
+                      pass
+
+          now = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')
+
+          with open('js/gpdata.js', 'w') as f:
+              f.write(f'// GP per kill data - auto-updated from Google Sheets\n')
+              f.write(f'// Last updated: {now}\n')
+              f.write('// onTask = on-task GP/kill, offTask = off-task GP/kill, contracts = binding contracts GP/kill\n')
+              f.write('const GP_PER_KILL = {\n')
+              for name, data in sorted(results.items()):
+                  f.write(f'  "{name}": {{ onTask: {data["onTask"]}, offTask: {data["offTask"]}, contracts: {data["contracts"]} }},\n')
+              f.write('};\n')
+
+          print(f"Updated {len(results)} creatures at {now}")
+          PYEOF
+
+          # Clean up
+          rm -f gpdata_raw.csv
+
+      - name: Commit GP Data changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add js/gpdata.js
+          if git diff --staged --quiet; then
+            echo "No GP data changes detected"
+          else
+            git commit -m "Auto-update GP data from Google Sheets"
+            git push
+          fi
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

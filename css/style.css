@@ -283,13 +283,21 @@ body {
   border-color: var(--gold-dim);
 }
 
+.boost-dropdown-item {
+  justify-content: space-between;
+}
+
+.boost-dropdown-item .boost-select {
+  margin-left: auto;
+}
+
 .boost-select {
   background: var(--bg-input);
   border: 1px solid var(--border);
   border-radius: 4px;
   color: var(--text-primary);
-  padding: 0.3rem 0.5rem;
-  font-size: 0.85rem;
+  padding: 0.25rem 0.4rem;
+  font-size: 0.8rem;
   font-family: inherit;
   cursor: pointer;
 }
@@ -511,6 +519,16 @@ body {
 
 .data-table .gp-col {
   color: var(--gold);
+}
+
+/* Monster icons in tables */
+.monster-icon {
+  width: 20px;
+  height: 20px;
+  vertical-align: middle;
+  margin-right: 0.4rem;
+  border-radius: 2px;
+  object-fit: contain;
 }
 
 .row-rank {
@@ -818,4 +836,414 @@ body {
 
 .site-footer a:hover {
   color: var(--gold);
+}
+
+/* Goals / Hiscores Tab */
+.player-input {
+  flex: 1;
+  min-width: 200px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-primary);
+  padding: 0.6rem 0.85rem;
+  font-size: 0.9rem;
+  font-family: inherit;
+}
+
+.player-input:focus {
+  outline: none;
+  border-color: var(--gold-dim);
+}
+
+.lookup-btn {
+  background: linear-gradient(135deg, var(--gold-dim), var(--gold));
+  color: var(--bg-primary);
+  border: none;
+  border-radius: var(--radius);
+  padding: 0.6rem 1.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.lookup-btn:hover {
+  opacity: 0.9;
+}
+
+.player-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.6rem;
+}
+
+.player-stat-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.65rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.player-stat-item .skill-icon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.stat-skill-name {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.stat-skill-level {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.stat-skill-xp {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.goal-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.goal-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.goal-row label {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  min-width: 70px;
+}
+
+.skill-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.skill-check-label {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.6rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+}
+
+.skill-check-label:has(input:checked) {
+  border-color: var(--gold-dim);
+  color: var(--gold);
+  background: rgba(201, 170, 88, 0.06);
+}
+
+.skill-check-label input {
+  display: none;
+}
+
+.goal-input {
+  width: 100px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-primary);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+  font-family: inherit;
+}
+
+.goal-input:focus {
+  outline: none;
+  border-color: var(--gold-dim);
+}
+
+.goal-results-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 0.75rem;
+}
+
+.goal-result-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+}
+
+.goal-result-card.achieved {
+  border-color: var(--green-dim);
+}
+
+.goal-skill-name {
+  font-family: 'Cinzel', serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--gold);
+  margin-bottom: 0.4rem;
+}
+
+.goal-achieved {
+  color: var(--green);
+  font-size: 0.85rem;
+}
+
+.goal-detail {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.15rem;
+}
+
+.goal-xp-needed {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0.3rem 0;
+}
+
+.goal-time {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--gold-bright);
+}
+
+/* ── Table Controls Right ────────────────────────────── */
+.table-controls-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* ── Editable KPH Column ─────────────────────────────── */
+.kph-col {
+  min-width: 80px;
+}
+
+.kph-cell {
+  cursor: pointer;
+  position: relative;
+}
+
+.kph-cell:hover {
+  background: rgba(201, 170, 88, 0.06);
+}
+
+.kph-cell .kph-value {
+  border-bottom: 1px dashed var(--border-highlight);
+}
+
+.kph-cell.custom-kph .kph-value {
+  color: var(--cyan);
+  border-bottom-color: var(--cyan);
+}
+
+.kph-cell .kph-reset {
+  margin-left: 0.35rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.kph-cell:hover .kph-reset {
+  opacity: 1;
+}
+
+.kph-cell .kph-reset:hover {
+  color: var(--red);
+}
+
+.kph-input {
+  width: 70px;
+  background: var(--bg-input);
+  border: 1px solid var(--gold-dim);
+  border-radius: 3px;
+  color: var(--text-primary);
+  padding: 0.2rem 0.35rem;
+  font-size: 0.85rem;
+  font-family: inherit;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.kph-input:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px rgba(201, 170, 88, 0.15);
+}
+
+/* ── Per-Monster Scrimshaw Column ────────────────────── */
+.scrim-col {
+  width: 45px;
+  min-width: 45px;
+  text-align: center !important;
+}
+
+.scrim-cell {
+  text-align: center !important;
+  padding: 0.4rem !important;
+}
+
+.scrim-toggle {
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+  accent-color: var(--gold);
+}
+
+/* ── Prefer Tag ──────────────────────────────────────── */
+.prefer-tag {
+  color: var(--green);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  vertical-align: middle;
+  margin-left: 0.25rem;
+}
+
+/* ── Blocked Rows ────────────────────────────────────── */
+.blocked-separator td {
+  text-align: center !important;
+  padding: 0.5rem !important;
+  background: rgba(196, 80, 80, 0.06);
+  border-top: 1px solid var(--red-dim);
+  border-bottom: 1px solid var(--red-dim);
+}
+
+.blocked-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--red) !important;
+}
+
+.blocked-row td {
+  opacity: 0.4;
+}
+
+.blocked-row:hover td {
+  opacity: 0.6;
+}
+
+/* ── Auto-fill Controls ──────────────────────────────── */
+.pref-block-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.auto-fill-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.auto-fill-group label {
+  white-space: nowrap;
+}
+
+/* ── Locked Rows ─────────────────────────────────────── */
+.locked-row td {
+  opacity: 0.45;
+}
+
+.locked-row:hover td {
+  opacity: 0.6;
+}
+
+.locked-text {
+  text-decoration: line-through;
+  text-decoration-color: var(--red-dim);
+}
+
+.locked-tag {
+  color: var(--red);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  vertical-align: middle;
+  margin-left: 0.25rem;
+  padding: 0.1rem 0.3rem;
+  background: rgba(196, 80, 80, 0.12);
+  border-radius: 3px;
+}
+
+/* ── Chip Stat (prefer/block value display) ──────────── */
+.chip-stat {
+  font-size: 0.75rem;
+  color: var(--gold);
+  font-weight: 600;
+  margin-left: 0.25rem;
+}
+
+/* ── Task View (grouped) row styling ─────────────────── */
+.task-group-row td:first-child {
+  font-weight: 600;
+  color: var(--gold);
+}
+
+.task-group-row .task-monsters-list {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-weight: 400;
+  display: block;
+  margin-top: 0.15rem;
+  font-style: italic;
+}
+
+.task-group-row .expand-icon {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-right: 0.35rem;
+}
+
+.task-child-row td {
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.task-child-row td:first-child {
+  padding-left: 2rem;
+}
+
+.task-child-row td:first-child::before {
+  content: '\2514\00a0';
+  color: var(--text-muted);
+}
+
+/* ── Disabled chip buttons ───────────────────────────── */
+.chip-btn.disabled,
+.chip-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.chip-btn.disabled:hover,
+.chip-btn:disabled:hover {
+  background: inherit;
 }

@@ -13,15 +13,15 @@
   <header class="site-header">
     <h1>Slayer & Combat Calculations</h1>
     <p class="subtitle">by .saltea &middot; contributors: mionee, roarroar</p>
-    <span class="version">v1.4</span>
+    <span class="version">v2.0</span>
   </header>
 
   <!-- Tab Navigation -->
   <nav class="tab-nav">
     <button class="tab-btn active" data-tab="tab-home">Home</button>
-    <button class="tab-btn" data-tab="tab-experience">Experience</button>
-    <button class="tab-btn" data-tab="tab-filter">Filter</button>
+    <button class="tab-btn" data-tab="tab-tasks">Slayer Tasks</button>
     <button class="tab-btn" data-tab="tab-prefblock">Prefer / Block</button>
+    <button class="tab-btn" data-tab="tab-goals">Goals</button>
     <button class="tab-btn" data-tab="tab-changelog">Changelog</button>
   </nav>
 
@@ -36,6 +36,12 @@
 
       <div id="multiplier-bar" class="multiplier-bar"></div>
 
+      <h2 class="section-title">Persuade Unlocks</h2>
+      <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:0.75rem;">
+        Toggle tasks you've purchased with 50 Slayer reward points. Locked persuade tasks are excluded from calculations.
+      </p>
+      <div id="persuade-toggles" class="boosts-grid"></div>
+
       <h2 class="section-title">Overview</h2>
       <div id="stats-bar" class="stats-bar"></div>
 
@@ -45,8 +51,8 @@
           <p>Select your active XP boosts above. The site will automatically recalculate all XP and GP rates across every tab. Your settings are saved locally in your browser.</p>
         </div>
         <div class="info-card">
-          <h3>Locked Tasks</h3>
-          <p>If you don't have the Slayer level for a creature, assign it to the Block list on the Prefer / Block tab. This removes it from the Filter view so your optimal task list stays accurate.</p>
+          <h3>Editable KPH</h3>
+          <p>On the Slayer Tasks tab, click any KPH value to edit it with your own kills/hour data. Custom values are saved locally and persist between sessions.</p>
         </div>
         <div class="info-card">
           <h3>Data Sources</h3>
@@ -59,23 +65,38 @@
       </div>
     </div>
 
-    <!-- EXPERIENCE TAB -->
-    <div id="tab-experience" class="tab-panel">
+    <!-- SLAYER TASKS TAB (merged Experience + Filter) -->
+    <div id="tab-tasks" class="tab-panel">
 
-      <h2 class="section-title">All Creatures &mdash; Experience Rates</h2>
+      <h2 class="section-title">Slayer Tasks</h2>
 
       <div class="table-controls">
         <div class="search-box">
-          <input type="text" id="exp-search" placeholder="Search creatures...">
+          <input type="text" id="task-search" placeholder="Search creatures...">
         </div>
-        <button id="toggle-clusters" class="toggle-clusters-btn active">Show Clusters</button>
+        <div class="table-controls-right">
+          <label style="color:var(--text-muted);font-size:0.85rem;">Sort by:</label>
+          <select id="sort-select" class="focus-select">
+            <option value="slayXpHr">Slay XP/Hr</option>
+            <option value="combatXpHr">Combat XP/Hr</option>
+            <option value="gpHr">GP/Hr</option>
+            <option value="gpTask">GP/Task</option>
+            <option value="slayXpTask">Slay XP/Task</option>
+            <option value="combatXpTask">Combat XP/Task</option>
+            <option value="minsTask">Minutes/Task</option>
+          </select>
+          <button id="toggle-task-view" class="toggle-clusters-btn">Group by Task</button>
+          <button id="toggle-clusters" class="toggle-clusters-btn active">Show Clusters</button>
+          <button id="toggle-blocked" class="toggle-clusters-btn">Show Blocked</button>
+        </div>
       </div>
 
       <div class="data-table-wrap">
-        <table class="data-table" id="exp-table">
+        <table class="data-table" id="tasks-table">
           <thead>
             <tr>
               <th data-sort="name" style="text-align:left">Creature</th>
+              <th data-sort="kph" class="kph-col">KPH</th>
               <th data-sort="slayXpHr">Slay XP/Hr</th>
               <th data-sort="combatXpHr">Combat XP/Hr</th>
               <th data-sort="gpHr">GP/Hr</th>
@@ -83,46 +104,10 @@
               <th data-sort="slayXpTask">Slay XP/Task</th>
               <th data-sort="combatXpTask">Combat XP/Task</th>
               <th data-sort="minsTask">Mins/Task</th>
+              <th class="scrim-col" title="Per-monster Scrimshaw of Sacrifice (+50% XP, 0 GP)">Scrim</th>
             </tr>
           </thead>
-          <tbody id="exp-table-body"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- FILTER TAB -->
-    <div id="tab-filter" class="tab-panel">
-
-      <h2 class="section-title">Filtered View &mdash; Based on Prefer / Block List</h2>
-
-      <div class="table-controls">
-        <label style="color:var(--text-muted);font-size:0.85rem;">Sort by:</label>
-        <select id="focus-select" class="focus-select">
-          <option value="slayXpHr">Slay XP/Hr</option>
-          <option value="combatXpHr">Combat XP/Hr</option>
-          <option value="gpHr">GP/Hr</option>
-          <option value="gpTask">GP/Task</option>
-          <option value="slayXpTask">Slay XP/Task</option>
-          <option value="combatXpTask">Combat XP/Task</option>
-          <option value="minsTask">Minutes/Task</option>
-        </select>
-      </div>
-
-      <div class="data-table-wrap">
-        <table class="data-table" id="filter-table">
-          <thead>
-            <tr>
-              <th data-sort="name" style="text-align:left">Creature</th>
-              <th data-sort="slayXpHr">Slay XP/Hr</th>
-              <th data-sort="combatXpHr">Combat XP/Hr</th>
-              <th data-sort="gpHr">GP/Hr</th>
-              <th data-sort="gpTask">GP/Task</th>
-              <th data-sort="slayXpTask">Slay XP/Task</th>
-              <th data-sort="combatXpTask">Combat XP/Task</th>
-              <th data-sort="minsTask">Mins/Task</th>
-            </tr>
-          </thead>
-          <tbody id="filter-table-body"></tbody>
+          <tbody id="tasks-table-body"></tbody>
         </table>
       </div>
     </div>
@@ -132,17 +117,41 @@
 
       <h2 class="section-title">Prefer / Block List</h2>
       <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:1.5rem;">
-        Assign creatures to your Prefer or Block list. Blocked creatures are hidden from the Filter tab. Preferred creatures are highlighted.
+        Assign creatures to your Prefer or Block list (max 8 each). Blocked creatures are hidden from the Slayer Tasks tab. Preferred creatures are highlighted.
         Click <strong>+</strong> to prefer or <strong>&minus;</strong> to block. Use the <strong>&times;</strong> button to remove assignments.
       </p>
 
-      <div style="margin-bottom:1rem;text-align:right;">
+      <div class="pref-block-controls">
+        <div class="auto-fill-group">
+          <label>Auto-fill Prefer by:</label>
+          <select id="auto-prefer-metric" class="focus-select">
+            <option value="">-- Select --</option>
+            <option value="slayXpHr">Best Slay XP/Hr</option>
+            <option value="combatXpHr">Best Combat XP/Hr</option>
+            <option value="gpHr">Best GP/Hr</option>
+            <option value="gpTask">Best GP/Task</option>
+            <option value="slayXpTask">Best Slay XP/Task</option>
+          </select>
+          <button id="auto-prefer-btn" class="lookup-btn" style="padding:0.4rem 0.8rem;font-size:0.8rem;">Auto-fill</button>
+        </div>
+        <div class="auto-fill-group">
+          <label>Auto-fill Block by:</label>
+          <select id="auto-block-metric" class="focus-select">
+            <option value="">-- Select --</option>
+            <option value="slayXpHr">Worst Slay XP/Hr</option>
+            <option value="combatXpHr">Worst Combat XP/Hr</option>
+            <option value="gpHr">Worst GP/Hr</option>
+            <option value="gpTask">Worst GP/Task</option>
+            <option value="slayXpTask">Worst Slay XP/Task</option>
+          </select>
+          <button id="auto-block-btn" class="lookup-btn" style="padding:0.4rem 0.8rem;font-size:0.8rem;">Auto-fill</button>
+        </div>
         <button id="reset-prefs" class="toggle-clusters-btn">Reset to Defaults</button>
       </div>
 
       <div class="pref-block-layout">
         <div class="pref-block-col prefer-col">
-          <div class="col-header">Prefer (<span id="prefer-count">0</span>)</div>
+          <div class="col-header">Prefer (<span id="prefer-count">0</span>/8)</div>
           <div class="task-list" id="prefer-list"></div>
         </div>
 
@@ -152,10 +161,16 @@
         </div>
 
         <div class="pref-block-col block-col">
-          <div class="col-header">Block (<span id="block-count">0</span>)</div>
+          <div class="col-header">Block (<span id="block-count">0</span>/8)</div>
           <div class="task-list" id="block-list"></div>
         </div>
       </div>
+    </div>
+
+    <!-- GOALS TAB -->
+    <div id="tab-goals" class="tab-panel">
+      <h2 class="section-title">Goals &mdash; XP Calculator</h2>
+      <div id="goals-content"></div>
     </div>
 
     <!-- CHANGELOG TAB -->
@@ -182,10 +197,14 @@
 
   <!-- Footer -->
   <footer class="site-footer">
-    <p>Slayer & Combat Calculations v1.4 &middot; Created by .saltea &middot; Data by the community</p>
+    <p>Slayer & Combat Calculations v2.0 &middot; Created by .saltea &middot; Data by the community</p>
   </footer>
 
   <script src="js/data.js"></script>
+  <script src="js/gpdata.js"></script>
+  <script src="js/laniakea-weighting.js"></script>
+  <script src="js/images.js"></script>
+  <script src="js/hiscores.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
