@@ -283,6 +283,27 @@ body {
   border-color: var(--gold-dim);
 }
 
+.boost-select {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-primary);
+  padding: 0.3rem 0.5rem;
+  font-size: 0.85rem;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.boost-select:focus {
+  outline: none;
+  border-color: var(--gold-dim);
+}
+
+.boost-select option {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
 .misc-input-wrap .unit {
   font-size: 0.75rem;
   color: var(--text-muted);

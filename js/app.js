@@ -6,7 +6,7 @@
   const state = {
     boosts: {
       codex: true,
-      avatar: true,
+      avatarPct: 6,
       raf: false,
       slayerBxp: false,
       combatBxp: false,
@@ -61,7 +61,7 @@
   function getSlayerMult() {
     let m = 1;
     if (state.boosts.codex) m += 0.05;
-    if (state.boosts.avatar) m += 0.06;
+    if (state.boosts.avatarPct > 0) m += state.boosts.avatarPct / 100;
     if (state.boosts.raf) m += 0.10;
     if (state.boosts.slayerBxp) m += 1.0;
     if (state.boosts.scrimshaw) m += 0.50;
@@ -72,7 +72,7 @@
 
   function getCombatMult() {
     let m = 1;
-    if (state.boosts.avatar) m += 0.06;
+    if (state.boosts.avatarPct > 0) m += state.boosts.avatarPct / 100;
     if (state.boosts.raf) m += 0.10;
     if (state.boosts.combatBxp) m += 1.0;
     if (state.boosts.scrimshaw) m += 0.50;
@@ -142,7 +142,6 @@
     const grid = document.getElementById('boosts-grid');
     const boostDefs = [
       { key: 'codex', label: 'Slayer Codex', badge: '+5%' },
-      { key: 'avatar', label: 'Clan Avatar', badge: '+6%' },
       { key: 'raf', label: 'Refer a Friend', badge: '+10%' },
       { key: 'slayerBxp', label: 'Slayer BXP', badge: '+100%' },
       { key: 'combatBxp', label: 'Combat BXP', badge: '+100%' },
@@ -154,6 +153,28 @@
       { key: 'doubleXp', label: 'Double XP', badge: '+100%' },
       { key: 'slayerIntrospection', label: 'Slayer Introspection', badge: '' },
     ];
+
+    // Clan Avatar dropdown (3-6%)
+    const avatarWrap = document.createElement('div');
+    avatarWrap.className = 'misc-input-wrap';
+    avatarWrap.innerHTML = `
+      <label>Clan Avatar</label>
+      <select id="avatar-select" class="boost-select">
+        <option value="0">Off</option>
+        <option value="3">3%</option>
+        <option value="4">4%</option>
+        <option value="5">5%</option>
+        <option value="6">6%</option>
+      </select>
+    `;
+    grid.appendChild(avatarWrap);
+    const avatarSelect = avatarWrap.querySelector('#avatar-select');
+    avatarSelect.value = state.boosts.avatarPct;
+    avatarSelect.addEventListener('change', (e) => {
+      state.boosts.avatarPct = parseInt(e.target.value) || 0;
+      updateAll();
+      saveState();
+    });
 
     boostDefs.forEach(def => {
       const item = document.createElement('div');
