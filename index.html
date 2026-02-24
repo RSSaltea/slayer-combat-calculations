@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Slayer & Combat Calculations</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>&#x2694;</text></svg>">
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="site-header">
+    <h1>Slayer & Combat Calculations</h1>
+    <p class="subtitle">by .saltea &middot; contributors: mionee, roarroar</p>
+    <span class="version">v1.4</span>
+  </header>
+
+  <!-- Tab Navigation -->
+  <nav class="tab-nav">
+    <button class="tab-btn active" data-tab="tab-home">Home</button>
+    <button class="tab-btn" data-tab="tab-experience">Experience</button>
+    <button class="tab-btn" data-tab="tab-filter">Filter</button>
+    <button class="tab-btn" data-tab="tab-prefblock">Prefer / Block</button>
+    <button class="tab-btn" data-tab="tab-changelog">Changelog</button>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-content">
+
+    <!-- HOME TAB -->
+    <div id="tab-home" class="tab-panel active">
+
+      <h2 class="section-title">Toggles / Boosts</h2>
+      <div id="boosts-grid" class="boosts-grid"></div>
+
+      <div id="multiplier-bar" class="multiplier-bar"></div>
+
+      <h2 class="section-title">Overview</h2>
+      <div id="stats-bar" class="stats-bar"></div>
+
+      <div class="info-grid">
+        <div class="info-card">
+          <h3>How to Use</h3>
+          <p>Select your active XP boosts above. The site will automatically recalculate all XP and GP rates across every tab. Your settings are saved locally in your browser.</p>
+        </div>
+        <div class="info-card">
+          <h3>Locked Tasks</h3>
+          <p>If you don't have the Slayer level for a creature, assign it to the Block list on the Prefer / Block tab. This removes it from the Filter view so your optimal task list stays accurate.</p>
+        </div>
+        <div class="info-card">
+          <h3>Data Sources</h3>
+          <p>Kill rates provided by the community. If you have specific KPH videos that match or exceed current data, contact .saltea on Discord.</p>
+        </div>
+        <div class="info-card">
+          <h3>Feedback</h3>
+          <p>For suggestions or issues, message <strong>.saltea</strong> on Discord.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- EXPERIENCE TAB -->
+    <div id="tab-experience" class="tab-panel">
+
+      <h2 class="section-title">All Creatures &mdash; Experience Rates</h2>
+
+      <div class="table-controls">
+        <div class="search-box">
+          <input type="text" id="exp-search" placeholder="Search creatures...">
+        </div>
+        <button id="toggle-clusters" class="toggle-clusters-btn active">Show Clusters</button>
+      </div>
+
+      <div class="data-table-wrap">
+        <table class="data-table" id="exp-table">
+          <thead>
+            <tr>
+              <th data-sort="name" style="text-align:left">Creature</th>
+              <th data-sort="slayXpHr">Slay XP/Hr</th>
+              <th data-sort="combatXpHr">Combat XP/Hr</th>
+              <th data-sort="gpHr">GP/Hr</th>
+              <th data-sort="gpTask">GP/Task</th>
+              <th data-sort="slayXpTask">Slay XP/Task</th>
+              <th data-sort="combatXpTask">Combat XP/Task</th>
+              <th data-sort="minsTask">Mins/Task</th>
+            </tr>
+          </thead>
+          <tbody id="exp-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- FILTER TAB -->
+    <div id="tab-filter" class="tab-panel">
+
+      <h2 class="section-title">Filtered View &mdash; Based on Prefer / Block List</h2>
+
+      <div class="table-controls">
+        <label style="color:var(--text-muted);font-size:0.85rem;">Sort by:</label>
+        <select id="focus-select" class="focus-select">
+          <option value="slayXpHr">Slay XP/Hr</option>
+          <option value="combatXpHr">Combat XP/Hr</option>
+          <option value="gpHr">GP/Hr</option>
+          <option value="gpTask">GP/Task</option>
+          <option value="slayXpTask">Slay XP/Task</option>
+          <option value="combatXpTask">Combat XP/Task</option>
+          <option value="minsTask">Minutes/Task</option>
+        </select>
+      </div>
+
+      <div class="data-table-wrap">
+        <table class="data-table" id="filter-table">
+          <thead>
+            <tr>
+              <th data-sort="name" style="text-align:left">Creature</th>
+              <th data-sort="slayXpHr">Slay XP/Hr</th>
+              <th data-sort="combatXpHr">Combat XP/Hr</th>
+              <th data-sort="gpHr">GP/Hr</th>
+              <th data-sort="gpTask">GP/Task</th>
+              <th data-sort="slayXpTask">Slay XP/Task</th>
+              <th data-sort="combatXpTask">Combat XP/Task</th>
+              <th data-sort="minsTask">Mins/Task</th>
+            </tr>
+          </thead>
+          <tbody id="filter-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PREFER / BLOCK TAB -->
+    <div id="tab-prefblock" class="tab-panel">
+
+      <h2 class="section-title">Prefer / Block List</h2>
+      <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:1.5rem;">
+        Assign creatures to your Prefer or Block list. Blocked creatures are hidden from the Filter tab. Preferred creatures are highlighted.
+        Click <strong>+</strong> to prefer or <strong>&minus;</strong> to block. Use the <strong>&times;</strong> button to remove assignments.
+      </p>
+
+      <div style="margin-bottom:1rem;text-align:right;">
+        <button id="reset-prefs" class="toggle-clusters-btn">Reset to Defaults</button>
+      </div>
+
+      <div class="pref-block-layout">
+        <div class="pref-block-col prefer-col">
+          <div class="col-header">Prefer (<span id="prefer-count">0</span>)</div>
+          <div class="task-list" id="prefer-list"></div>
+        </div>
+
+        <div class="pref-block-col unassigned-col" style="min-width:250px;">
+          <div class="col-header">Unassigned</div>
+          <div class="task-list" id="unassigned-list"></div>
+        </div>
+
+        <div class="pref-block-col block-col">
+          <div class="col-header">Block (<span id="block-count">0</span>)</div>
+          <div class="task-list" id="block-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHANGELOG TAB -->
+    <div id="tab-changelog" class="tab-panel">
+
+      <h2 class="section-title">Changelog</h2>
+
+      <div class="data-table-wrap">
+        <table class="changelog-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Version</th>
+              <th>Note</th>
+              <th>Change</th>
+            </tr>
+          </thead>
+          <tbody id="changelog-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <p>Slayer & Combat Calculations v1.4 &middot; Created by .saltea &middot; Data by the community</p>
+  </footer>
+
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
