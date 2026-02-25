@@ -1693,6 +1693,18 @@ body {
   color: #fff;
 }
 
+/* Alt1 manual notice */
+.ultimate-manual-notice {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.5rem 0.85rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-bottom: 0.75rem;
+}
+
 /* Alt1 Check button */
 .ultimate-check-btn {
   background: var(--bg-card);
