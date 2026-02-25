@@ -18,10 +18,10 @@ const MONSTERS = [
   // Nightmares
   { name: "Nightmares", kph: 900, baseSlayXp: 1540.0, baseCombatXp: 1750.0, minTask: 110, maxTask: 162, avgKills: 130, category: "nightmares" },
   // Strykewyrms
-  { name: "Lava Strykewyrms", kph: 520, baseSlayXp: 1896.8, baseCombatXp: 1500.0, minTask: 60, maxTask: 120, avgKills: 90, category: "strykewyrms" },
-  { name: "Lava Strykewyrms", kph: 520, baseSlayXp: 1896.8, baseCombatXp: 1500.0, minTask: 101, maxTask: 150, avgKills: 126, category: "strykewyrms", cluster: "Strykewyrms" },
-  { name: "Ice Strykewyrms", kph: 450, baseSlayXp: 693.2, baseCombatXp: 1250.0, minTask: 120, maxTask: 240, avgKills: 180, category: "strykewyrms" },
-  { name: "Ice Strykewyrms", kph: 450, baseSlayXp: 693.2, baseCombatXp: 1250.0, minTask: 101, maxTask: 150, avgKills: 126, category: "strykewyrms", cluster: "Strykewyrms" },
+  { name: "Lava Strykewyrms", kph: 520, baseSlayXp: 1896.8, baseCombatXp: 1500.0, minTask: 60, maxTask: 120, avgKills: 90, category: "lava_strykewyrms" },
+  { name: "Lava Strykewyrms", kph: 520, baseSlayXp: 1896.8, baseCombatXp: 1500.0, minTask: 101, maxTask: 150, avgKills: 126, category: "lava_strykewyrms", cluster: "Strykewyrms" },
+  { name: "Ice Strykewyrms", kph: 450, baseSlayXp: 693.2, baseCombatXp: 1250.0, minTask: 120, maxTask: 240, avgKills: 180, category: "ice_strykewyrms" },
+  { name: "Ice Strykewyrms", kph: 450, baseSlayXp: 693.2, baseCombatXp: 1250.0, minTask: 101, maxTask: 150, avgKills: 126, category: "ice_strykewyrms", cluster: "Strykewyrms" },
   // Vile Blooms
   { name: "Vile Blooms", kph: 400, baseSlayXp: 3338.4, baseCombatXp: 3000.0, minTask: 70, maxTask: 110, avgKills: 90, category: "vile_blooms" },
   // Shapeshifters
@@ -178,7 +178,8 @@ const TASK_CATEGORIES = [
   { id: "soul_devourers", label: "Soul Devourers", monsters: ["Crocodile Akhs"] },
   { id: "soulgazers", label: "Soulgazers", monsters: ["Soulgazers"] },
   { id: "steel_dragons", label: "Steel Dragons", monsters: ["Steel Dragons"] },
-  { id: "strykewyrms", label: "Strykewyrms", monsters: ["Lava Strykewyrms", "Ice Strykewyrms"] },
+  { id: "ice_strykewyrms", label: "Ice Strykewyrms", monsters: ["Ice Strykewyrms"] },
+  { id: "lava_strykewyrms", label: "Lava Strykewyrms", monsters: ["Lava Strykewyrms"] },
   { id: "tormented_demons", label: "Tormented Demons", monsters: ["Tormented Demons"] },
   { id: "vile_blooms", label: "Vile Blooms", monsters: ["Vile Blooms"] },
   { id: "vyrewatch", label: "Vyrewatch", monsters: ["Vyrewatch"] },

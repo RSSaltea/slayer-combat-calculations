@@ -1165,7 +1165,7 @@
     "Elves": "elves",
     "Shadow Creatures": "shadow_creatures",
     "Nightmares": "nightmares",
-    "Lava Strykewyrms": "strykewyrms",
+    "Lava Strykewyrms": "lava_strykewyrms",
     "Vile Blooms": "vile_blooms",
     "Crystal Shapeshifters": "crystal_shapeshifters",
     "Soul Devourers": "soul_devourers",
@@ -1195,7 +1195,7 @@
     "Nodon Dragonkin": "nodon",
     "Ganodermic Creatures": "ganodermic",
     "Gargoyles": "gargoyles",
-    "Ice Strykewyrms": "strykewyrms",
+    "Ice Strykewyrms": "ice_strykewyrms",
     "Iron Dragons": "iron_dragons",
     "Kalphites": "kalphites",
     "Mithril Dragons": "mithril_dragons",
@@ -1211,7 +1211,7 @@
   var CLUSTER_WEIGHT_CATS = {
     "Demons": { cats: ["black_demons", "abyssal_demons", "kalgerion_demons", "ripper_demons", "greater_demons"], id: "cluster_demons" },
     "Dragons": { cats: ["black_dragons", "celestial_dragons", "rune_dragons", "adamant_dragons", "gemstone_dragons", "iron_dragons", "mithril_dragons", "steel_dragons", "nodon"], id: "cluster_dragons" },
-    "Strykewyrms": { cats: ["strykewyrms"], id: null },
+    "Strykewyrms": { cats: ["lava_strykewyrms", "ice_strykewyrms"], id: null },
     "Undead": { cats: ["edimmus"], id: "cluster_undead" },
   };
 
