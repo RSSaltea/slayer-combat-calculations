@@ -1,13 +1,13 @@
 // GP per kill data - auto-updated from Google Sheets
-// Last updated: 2026-02-25 11:48 UTC
+// Last updated: 2026-02-25 12:21 UTC
 // onTask = on-task GP/kill, offTask = off-task GP/kill, binding = binding contracts GP/kill, tetra = tetra contracts GP/kill
 const GP_PER_KILL = {
   "Abyssal Beasts": { onTask: 20416.82, offTask: 20224.63, binding: 0, tetra: 0 },
   "Abyssal Beasts Demon Cluster": { onTask: 20416.82, offTask: 20224.63, binding: 0, tetra: 0 },
   "Abyssal Beasts and Lords Combo": { onTask: 32271.29, offTask: 24283.46, binding: 0, tetra: 0 },
   "Abyssal Beasts and Lords Combo Demon Cluster": { onTask: 32271.29, offTask: 24283.46, binding: 0, tetra: 0 },
-  "Abyssal Demons": { onTask: 4399.61, offTask: 4238.87, binding: -28487.46, tetra: 0 },
-  "Abyssal Demons Demon Cluster": { onTask: 4399.61, offTask: 4238.87, binding: -28487.46, tetra: 0 },
+  "Abyssal Demons": { onTask: 4399.61, offTask: 4238.87, binding: -28487.46, tetra: 39328.38 },
+  "Abyssal Demons Demon Cluster": { onTask: 4399.61, offTask: 4238.87, binding: 0, tetra: 0 },
   "Abyssal Lords": { onTask: 71475.27, offTask: 48548.27, binding: 0, tetra: 0 },
   "Abyssal Lords Demon Cluster": { onTask: 71475.27, offTask: 48548.27, binding: 0, tetra: 0 },
   "Abyssal Savages": { onTask: 0.0, offTask: 0.0, binding: 0, tetra: 0 },
@@ -44,7 +44,7 @@ const GP_PER_KILL = {
   "Elves": { onTask: 3322.77, offTask: 3322.77, binding: 0, tetra: 0 },
   "Feral Dinosaurs": { onTask: 22429.14, offTask: 21848.08, binding: 0, tetra: 0 },
   "Ganodermic Beasts": { onTask: 22084.84, offTask: 22084.84, binding: 0, tetra: 0 },
-  "Gargoyles": { onTask: 4739.17, offTask: 4739.17, binding: -3342.7, tetra: 0 },
+  "Gargoyles": { onTask: 4739.17, offTask: 4739.17, binding: -3342.7, tetra: 60229.82 },
   "Glacors": { onTask: 168269.88, offTask: 168269.88, binding: 0, tetra: 0 },
   "Glacytes": { onTask: 3458.94, offTask: 3458.94, binding: 0, tetra: 0 },
   "Greater Demons": { onTask: 1489.04, offTask: 1489.04, binding: 0, tetra: 0 },
@@ -54,8 +54,8 @@ const GP_PER_KILL = {
   "Ice Strykewyrms": { onTask: 9973.89, offTask: 2493.47, binding: 0, tetra: 0 },
   "Ice Strykewyrms Strykewyrms Cluster": { onTask: 9973.89, offTask: 4087.24, binding: 0, tetra: 0 },
   "Iron Dragons": { onTask: 10865.63, offTask: 10865.63, binding: 0, tetra: 0 },
-  "Kal'gerion Demons": { onTask: 17231.27, offTask: 17231.27, binding: 52328.84, tetra: 0 },
-  "Kal'gerion Demons Demon Cluster": { onTask: 17231.27, offTask: 17231.27, binding: 52328.84, tetra: 0 },
+  "Kal'gerion Demons": { onTask: 17231.27, offTask: 17231.27, binding: 52328.84, tetra: 115865.4 },
+  "Kal'gerion Demons Demon Cluster": { onTask: 17231.27, offTask: 17231.27, binding: 0, tetra: 0 },
   "Kalphites": { onTask: 0.0, offTask: 0.0, binding: 0, tetra: 0 },
   "Lava Strykewyrms": { onTask: 77615.71, offTask: 76262.53, binding: 0, tetra: 0 },
   "Lava Strykewyrms Strykewyrms Cluster": { onTask: 77615.71, offTask: 76262.53, binding: 0, tetra: 0 },
@@ -71,8 +71,8 @@ const GP_PER_KILL = {
   "Onyx Dragons": { onTask: 14823.6, offTask: 13047.83, binding: 0, tetra: 0 },
   "Onyx Dragons Dragon Cluster": { onTask: 14823.6, offTask: 13047.83, binding: 0, tetra: 0 },
   "Profane Scabarites": { onTask: 33152.72, offTask: 4921.09, binding: 0, tetra: 0 },
-  "Ripper Demons": { onTask: 16086.75, offTask: 15527.81, binding: 4950.08, tetra: 0 },
-  "Ripper Demons Demon Cluster": { onTask: 16086.75, offTask: 15527.81, binding: 4950.08, tetra: 0 },
+  "Ripper Demons": { onTask: 16086.75, offTask: 15527.81, binding: 4950.08, tetra: 86207.66 },
+  "Ripper Demons Demon Cluster": { onTask: 16086.75, offTask: 15527.81, binding: 0, tetra: 0 },
   "Ripper Dinosaurs": { onTask: 18664.06, offTask: 18083.0, binding: 0, tetra: 0 },
   "Rorarius": { onTask: 6501.75, offTask: 5034.34, binding: 0, tetra: 0 },
   "Rune Dragons": { onTask: 90149.3, offTask: 84158.83, binding: 0, tetra: 0 },
