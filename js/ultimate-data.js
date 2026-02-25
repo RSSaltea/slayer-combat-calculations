@@ -185,7 +185,7 @@ var ULTIMATE_AREAS = [
   {
     id: "lost_lands",
     name: "Lost Lands",
-    areaImage: "Lost Lands and Dungeons.png",
+    areaImage: "Lost Lans and Dungeons.png",
     title: "the Harbinger of Death",
     drops: [
       { item: "Black Mask (10)",              monster: "Cave Horror",                  rate: "1/512" },

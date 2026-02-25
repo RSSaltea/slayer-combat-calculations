@@ -2148,7 +2148,24 @@
   function updateManualNotice() {
     var notice = document.getElementById('ultimate-manual-notice');
     if (!notice) return;
-    notice.style.display = 'none';
+    var scanning = typeof UltimateDetector !== 'undefined' && UltimateDetector.isRunning();
+    if (!scanning) {
+      notice.style.display = 'none';
+      return;
+    }
+    var area = state.ultimateActiveArea;
+    var msg = '';
+    if (area === 'lost_lands' || area === 'senntisten') {
+      msg = 'Glaiven, Steadfast and Ragefire Boots need to be done manually';
+    } else if (area === 'general') {
+      msg = 'Dragon eggs need to be done manually';
+    }
+    if (msg) {
+      notice.textContent = msg;
+      notice.style.display = '';
+    } else {
+      notice.style.display = 'none';
+    }
   }
 
   // ── Update All ─────────────────────────────────────────────────────
