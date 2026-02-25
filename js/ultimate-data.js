@@ -322,6 +322,9 @@ var ULTIMATE_AREAS = [
       { item: "Dwarf Multicannon Upgrade Kit",  monster: "Nodon Dragonkin",            rate: "1/2000",   onTask: true },
       { item: "Kinetic Cyclone Upgrade Kit",     monster: "Nodon Dragonkin",            rate: "1/2000",   onTask: true },
       { item: "Oldak Coil Upgrade Kit",          monster: "Nodon Dragonkin",            rate: "1/2000",   onTask: true },
+      { item: "Steadfast Boots",                 monster: "Nodon Dragonkin",            rate: "1/1260",   onTask: true },
+      { item: "Glaiven Boots",                   monster: "Nodon Dragonkin",            rate: "1/1260",   onTask: true },
+      { item: "Ragefire Boots",                  monster: "Nodon Dragonkin",            rate: "1/1260",   onTask: true },
       { item: "Abyssal Scourge",                 monster: "Abyssal Lord",               rate: "1/1280",   onTask: true },
       { item: "Jaws of the Abyss",              monster: "Abyssal Lord",               rate: "1/1280",   onTask: true },
     ]
