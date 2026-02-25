@@ -336,10 +336,19 @@ async function doLookup() {
     // Quests
     if (results[1].status === 'fulfilled' && results[1].value) {
       playerQuests = results[1].value;
-      questDiv.innerHTML =
-        '<span style="color:var(--green);font-size:0.8rem;">' +
-          playerQuests.completed.size + ' quests completed' +
-        '</span>';
+      if (playerQuests.completed.size === 0) {
+        // RuneMetrics is private — assume all quests completed
+        playerQuests = null;
+        questDiv.innerHTML =
+          '<span style="color:var(--text-muted);font-size:0.8rem;">' +
+            'RuneMetrics private \u2014 assuming all quests completed' +
+          '</span>';
+      } else {
+        questDiv.innerHTML =
+          '<span style="color:var(--green);font-size:0.8rem;">' +
+            playerQuests.completed.size + ' quests completed' +
+          '</span>';
+      }
       questDiv.style.display = 'block';
     } else {
       playerQuests = null;

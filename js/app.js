@@ -36,6 +36,9 @@
     scrimshawMonsters: new Set(),
     persuadeUnlocks: new Set(), // which persuade tasks the player has unlocked
     introspectionChoices: {},   // category_id -> 'min' | 'max' (Slayer Introspection)
+    ultimateObtained: {},       // item name -> true (Ultimate Slayer tracker)
+    ultimateActiveArea: 'asgarnia_misthalin',
+    ultimateExpanded: {},       // item name -> true
   };
 
   // Player data from hiscores lookup (set via callback)
@@ -65,6 +68,8 @@
         if (p.scrimshawMonsters) state.scrimshawMonsters = new Set(p.scrimshawMonsters);
         if (p.persuadeUnlocks) state.persuadeUnlocks = new Set(p.persuadeUnlocks);
         if (p.introspectionChoices) state.introspectionChoices = p.introspectionChoices;
+        if (p.ultimateObtained) state.ultimateObtained = p.ultimateObtained;
+        if (p.ultimateActiveArea) state.ultimateActiveArea = p.ultimateActiveArea;
       }
     } catch (e) { /* ignore */ }
   }
@@ -89,6 +94,8 @@
         scrimshawMonsters: Array.from(state.scrimshawMonsters),
         persuadeUnlocks: Array.from(state.persuadeUnlocks),
         introspectionChoices: state.introspectionChoices,
+        ultimateObtained: state.ultimateObtained,
+        ultimateActiveArea: state.ultimateActiveArea,
       }));
     } catch (e) { /* ignore */ }
   }
@@ -1394,6 +1401,141 @@
     });
   }
 
+  // ── Ultimate Slayer Tab ────────────────────────────────────────────
+  function getUltimateImagePath(itemName) {
+    var slug = itemName.replace(/\s+/g, '_');
+    return 'images/ultimate/' + slug + '.png';
+  }
+
+  function countObtainedInArea(area) {
+    var count = 0;
+    area.drops.forEach(function (d) {
+      if (state.ultimateObtained[d.item]) count++;
+    });
+    return count;
+  }
+
+  function countTotalObtained() {
+    var count = 0;
+    ULTIMATE_AREAS.forEach(function (area) {
+      count += countObtainedInArea(area);
+    });
+    return count;
+  }
+
+  function countTotalItems() {
+    var count = 0;
+    ULTIMATE_AREAS.forEach(function (area) {
+      count += area.drops.length;
+    });
+    return count;
+  }
+
+  function renderUltimateProgress() {
+    var container = document.getElementById('ultimate-progress');
+    var obtained = countTotalObtained();
+    var total = countTotalItems();
+    var pct = total > 0 ? (obtained / total * 100) : 0;
+    container.innerHTML =
+      '<span class="ultimate-progress-text">Overall: <strong>' + obtained + ' / ' + total + '</strong> items obtained</span>' +
+      '<div class="ultimate-progress-track">' +
+        '<div class="ultimate-progress-fill" style="width:' + pct.toFixed(1) + '%"></div>' +
+      '</div>';
+  }
+
+  function renderUltimateAreaTabs() {
+    var container = document.getElementById('ultimate-area-tabs');
+    container.innerHTML = '';
+    ULTIMATE_AREAS.forEach(function (area) {
+      var btn = document.createElement('button');
+      btn.className = 'ultimate-area-btn' + (state.ultimateActiveArea === area.id ? ' active' : '');
+      var obtained = countObtainedInArea(area);
+      btn.innerHTML = area.name + '<span class="area-count">' + obtained + '/' + area.drops.length + '</span>';
+      btn.addEventListener('click', function () {
+        state.ultimateActiveArea = area.id;
+        saveState();
+        renderUltimateTab();
+      });
+      container.appendChild(btn);
+    });
+  }
+
+  function renderUltimateItems() {
+    var area = ULTIMATE_AREAS.find(function (a) { return a.id === state.ultimateActiveArea; });
+    if (!area) return;
+
+    var titleEl = document.getElementById('ultimate-area-title');
+    titleEl.textContent = 'Title: ' + area.title;
+
+    var grid = document.getElementById('ultimate-items');
+    grid.innerHTML = '';
+
+    area.drops.forEach(function (drop) {
+      var isObtained = !!state.ultimateObtained[drop.item];
+      var isExpanded = !!state.ultimateExpanded[drop.item];
+
+      var card = document.createElement('div');
+      card.className = 'ultimate-card' + (isObtained ? ' obtained' : '') + (isExpanded ? ' expanded' : '');
+
+      var rateDisplay = drop.rate || '\u2014';
+      var escapedItem = drop.item.replace(/"/g, '&quot;');
+
+      card.innerHTML =
+        '<div class="ultimate-card-header">' +
+          '<img class="ultimate-card-img" src="' + getUltimateImagePath(drop.item) + '" alt="" onerror="this.style.display=\'none\'">' +
+          '<span class="ultimate-card-name">' + drop.item + '</span>' +
+          '<span class="ultimate-card-check" data-item="' + escapedItem + '">' +
+            (isObtained ? '&#10003;' : '') +
+          '</span>' +
+        '</div>' +
+        '<div class="ultimate-card-details">' +
+          '<div class="ultimate-detail-row">' +
+            '<span class="ultimate-detail-label">Monster</span>' +
+            '<span class="ultimate-detail-value">' + drop.monster + '</span>' +
+          '</div>' +
+          '<div class="ultimate-detail-row">' +
+            '<span class="ultimate-detail-label">Drop Rate</span>' +
+            '<span class="ultimate-detail-value">' + rateDisplay +
+              (drop.onTask ? ' <span class="on-task-badge">On-Task</span>' : '') +
+            '</span>' +
+          '</div>' +
+        '</div>';
+
+      // Checkbox click: toggle obtained
+      var checkEl = card.querySelector('.ultimate-card-check');
+      checkEl.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (state.ultimateObtained[drop.item]) {
+          delete state.ultimateObtained[drop.item];
+        } else {
+          state.ultimateObtained[drop.item] = true;
+        }
+        saveState();
+        renderUltimateTab();
+      });
+
+      // Header click: expand/collapse
+      card.querySelector('.ultimate-card-header').addEventListener('click', function (e) {
+        if (e.target.closest('.ultimate-card-check')) return;
+        if (state.ultimateExpanded[drop.item]) {
+          delete state.ultimateExpanded[drop.item];
+        } else {
+          state.ultimateExpanded[drop.item] = true;
+        }
+        card.classList.toggle('expanded');
+      });
+
+      grid.appendChild(card);
+    });
+  }
+
+  function renderUltimateTab() {
+    if (typeof ULTIMATE_AREAS === 'undefined') return;
+    renderUltimateProgress();
+    renderUltimateAreaTabs();
+    renderUltimateItems();
+  }
+
   // ── Update All ─────────────────────────────────────────────────────
   function updateAll() {
     updateMultiplierBar();
@@ -1421,6 +1563,7 @@
     renderPersuadeToggles();
     updateAll();
     renderChangelog();
+    renderUltimateTab();
     if (typeof initPlayerLookup === 'function') initPlayerLookup();
     if (typeof initGoalsTab === 'function') initGoalsTab();
   }
