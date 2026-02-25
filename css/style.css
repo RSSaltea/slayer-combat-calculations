@@ -704,6 +704,50 @@ body {
   line-height: 1.6;
 }
 
+/* To-Do List */
+.todo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.todo-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  color: var(--text-primary);
+}
+
+.todo-item.done {
+  opacity: 0.5;
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+.todo-check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  font-size: 0.75rem;
+  color: var(--green);
+  flex-shrink: 0;
+}
+
+.todo-item.done .todo-check {
+  background: var(--green);
+  border-color: var(--green);
+  color: #fff;
+}
+
 /* Changelog */
 .changelog-table {
   width: 100%;

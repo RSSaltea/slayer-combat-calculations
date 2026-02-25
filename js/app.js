@@ -1386,6 +1386,21 @@
     });
   }
 
+  // ── To-Do List ─────────────────────────────────────────────────────
+  function renderTodoList() {
+    var container = document.getElementById('todo-list');
+    if (!container || typeof TODO_LIST === 'undefined') return;
+    container.innerHTML = '';
+    TODO_LIST.forEach(function (item) {
+      var div = document.createElement('div');
+      div.className = 'todo-item' + (item.done ? ' done' : '');
+      div.innerHTML =
+        '<span class="todo-check">' + (item.done ? '&#10003;' : '') + '</span>' +
+        '<span class="todo-text">' + item.text + '</span>';
+      container.appendChild(div);
+    });
+  }
+
   // ── Changelog ──────────────────────────────────────────────────────
   function renderChangelog() {
     var tbody = document.getElementById('changelog-body');
@@ -1814,6 +1829,7 @@
     initPrefBlockControls();
     renderPersuadeToggles();
     updateAll();
+    renderTodoList();
     renderChangelog();
     renderUltimateTab();
     initUltimateExport();

@@ -271,3 +271,8 @@ const CHANGELOG = [
   { date: "03/03/2023", version: "1.1", note: "Painge. This was a lot of work.", change: "Fixed Pref/Block filter" },
   { date: "02/03/2023", version: "1.0", note: "Released", change: "Initial release" },
 ];
+
+// To-Do list
+const TODO_LIST = [
+  { text: "Make Alt1 Plugin", done: false },
+];
