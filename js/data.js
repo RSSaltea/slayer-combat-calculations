@@ -145,6 +145,7 @@ const TASK_CATEGORIES = [
   { id: "chaos_giants", label: "Chaos Giants", monsters: ["Chaos Giants"] },
   { id: "cluster_demons", label: "Demons (Cluster)", monsters: [] },
   { id: "cluster_dragons", label: "Dragons (Cluster)", monsters: [] },
+  { id: "cluster_strykewyrms", label: "Strykewyrms (Cluster)", monsters: [] },
   { id: "cluster_undead", label: "Undead (Cluster)", monsters: [] },
   { id: "corrupted_creatures", label: "Corrupted Creatures", monsters: ["Corrupted Workers"] },
   { id: "cresbots", label: "Cres's Creations", monsters: ["Cresbots"] },

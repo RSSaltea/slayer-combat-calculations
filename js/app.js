@@ -1211,7 +1211,7 @@
   var CLUSTER_WEIGHT_CATS = {
     "Demons": { cats: ["black_demons", "abyssal_demons", "kalgerion_demons", "ripper_demons", "greater_demons"], id: "cluster_demons" },
     "Dragons": { cats: ["black_dragons", "celestial_dragons", "rune_dragons", "adamant_dragons", "gemstone_dragons", "iron_dragons", "mithril_dragons", "steel_dragons", "nodon"], id: "cluster_dragons" },
-    "Strykewyrms": { cats: ["lava_strykewyrms", "ice_strykewyrms"], id: null },
+    "Strykewyrms": { cats: ["lava_strykewyrms", "ice_strykewyrms"], id: "cluster_strykewyrms" },
     "Undead": { cats: ["edimmus"], id: "cluster_undead" },
   };
 
