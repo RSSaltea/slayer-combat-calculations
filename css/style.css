@@ -1605,10 +1605,11 @@ body {
 /* Area title */
 .ultimate-area-title {
   font-family: 'Cinzel', serif;
-  font-size: 0.85rem;
-  color: var(--text-muted);
+  font-size: 1rem;
+  color: var(--gold);
   margin-bottom: 1rem;
   font-style: italic;
+  letter-spacing: 0.03em;
 }
 
 /* Item grid */
@@ -1624,7 +1625,8 @@ body {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  overflow: hidden;
+  overflow: visible;
+  position: relative;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
@@ -1635,6 +1637,10 @@ body {
 .ultimate-card.obtained {
   border-color: var(--green-dim);
   box-shadow: 0 0 8px rgba(76, 175, 80, 0.1);
+}
+
+.ultimate-card.obtained .ultimate-card-details {
+  border-color: var(--green-dim);
 }
 
 .ultimate-card-header {
@@ -1704,13 +1710,26 @@ body {
 /* Expanded details */
 .ultimate-card-details {
   display: none;
-  padding: 0 0.65rem 0.55rem;
+  position: absolute;
+  top: 100%;
+  left: -1px;
+  right: -1px;
+  padding: 0.4rem 0.65rem 0.55rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
   border-top: 1px solid var(--border);
-  margin-top: 0;
+  border-radius: 0 0 var(--radius) var(--radius);
+  z-index: 10;
+  box-shadow: var(--shadow);
 }
 
 .ultimate-card.expanded .ultimate-card-details {
   display: block;
+}
+
+.ultimate-card.expanded {
+  z-index: 11;
+  border-radius: var(--radius) var(--radius) 0 0;
 }
 
 .ultimate-detail-row {
