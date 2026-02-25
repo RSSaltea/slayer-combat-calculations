@@ -171,7 +171,7 @@ var ULTIMATE_AREAS = [
       { item: "Parasitic Orb",               monster: "Ripper Demon (elite)",        rate: "1/334" },
       { item: "Raptor Key Part 3",           monster: "Camel Warriors",              rate: "1/256",    onTask: true },
       { item: "Camel Staff",                 monster: "Camel Warriors",              rate: "1/2000",   onTask: true },
-      { item: "Spectral Lens",               monster: "Profane Scabarite",           rate: "1/4096",   onTask: true },
+      { item: "Spectral Lens",               monster: "Profane Scabarite",           rate: "1/506",    onTask: true },
     ]
   },
   {
