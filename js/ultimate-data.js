@@ -171,6 +171,7 @@ var ULTIMATE_AREAS = [
       { item: "Parasitic Orb",               monster: "Ripper Demon (elite)",        rate: "1/334" },
       { item: "Raptor Key Part 3",           monster: "Camel Warriors",              rate: "1/256",    onTask: true },
       { item: "Camel Staff",                 monster: "Camel Warriors",              rate: "1/2000",   onTask: true },
+      { item: "Spectral Lens",               monster: "Profane Scabarite",           rate: "1/4096",   onTask: true },
     ]
   },
   {
@@ -310,6 +311,7 @@ var ULTIMATE_AREAS = [
       { item: "Wyrm Spike",                   monster: "Lava Strykewyrm",             rate: "1/6168",   onTask: true },
       { item: "Wyrm Heart",                   monster: "Lava Strykewyrm",             rate: "1/6168",   onTask: true },
       { item: "Wyrm Scalp",                   monster: "Lava Strykewyrm",             rate: "1/6168",   onTask: true },
+      { item: "Greater Sonic Wave Ability Codex", monster: "Armoured Phantom",       rate: "1/1536",   onTask: true },
     ]
   },
   {
