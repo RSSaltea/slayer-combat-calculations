@@ -68,6 +68,47 @@
     }
   }
 
+  // ── Fuzzy Image Matching (tolerance-based for -f images) ───────────
+  function fuzzyImageFound(name, tolerance) {
+    if (!refs[name] || !screen) return false;
+    tolerance = tolerance || 30;
+
+    var needle = refs[name];
+    var nd = needle.data;
+    var nw = needle.width, nh = needle.height;
+    if (!nd || !nw || !nh) return false;
+
+    // Get screen pixel data
+    var screenData, sd, sw, sh;
+    try {
+      screenData = (typeof screen.toData === 'function') ? screen.toData() : screen;
+      sd = screenData.data;
+      sw = screenData.width;
+      sh = screenData.height;
+    } catch (e) { return false; }
+    if (!sd || !sw || !sh) return false;
+
+    // Search screen for needle with pixel tolerance (early termination)
+    for (var sy = 0; sy <= sh - nh; sy++) {
+      for (var sx = 0; sx <= sw - nw; sx++) {
+        var match = true;
+        for (var ny = 0; ny < nh && match; ny++) {
+          for (var nx = 0; nx < nw && match; nx++) {
+            var si = ((sy + ny) * sw + (sx + nx)) * 4;
+            var ni = (ny * nw + nx) * 4;
+            if (Math.abs(sd[si] - nd[ni]) > tolerance ||
+                Math.abs(sd[si + 1] - nd[ni + 1]) > tolerance ||
+                Math.abs(sd[si + 2] - nd[ni + 2]) > tolerance) {
+              match = false;
+            }
+          }
+        }
+        if (match) return true;
+      }
+    }
+    return false;
+  }
+
   // ── Screen Capture (same as vorkath) ────────────────────────────────
   function captureScreen() {
     try {
@@ -173,25 +214,23 @@
         var slug = itemSlug(drop.item);
 
         if (REVERSE_DETECT[drop.item]) {
-          // Check -f (found) image — obtained item screenshot
+          // Check -f (found) image — exact match first, fuzzy fallback
           var fSlug = itemSlugFound(drop.item);
-          var fLoaded = !!refs[fSlug];
-          var fMatch = fLoaded && imageFound(fSlug);
-          console.log('[UltDetect] ' + drop.item + ': -f loaded=' + fLoaded + ', match=' + fMatch);
-          if (fMatch) {
-            changes[drop.item] = true;
-            hasChanges = true;
-            return;
+          if (refs[fSlug]) {
+            if (imageFound(fSlug) || fuzzyImageFound(fSlug, 30)) {
+              changes[drop.item] = true;
+              hasChanges = true;
+              return;
+            }
           }
-          // Check positive image
+          // Check positive image — exact match first, fuzzy fallback
           var posSlug = itemSlugPositive(drop.item);
-          var posLoaded = !!refs[posSlug];
-          var posMatch = posLoaded && imageFound(posSlug);
-          console.log('[UltDetect] ' + drop.item + ': pos loaded=' + posLoaded + ', match=' + posMatch);
-          if (posMatch) {
-            changes[drop.item] = true;
-            hasChanges = true;
-            return;
+          if (refs[posSlug]) {
+            if (imageFound(posSlug) || fuzzyImageFound(posSlug, 30)) {
+              changes[drop.item] = true;
+              hasChanges = true;
+              return;
+            }
           }
           // Neither matched — leave state unchanged
         } else {
