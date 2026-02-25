@@ -165,21 +165,26 @@
 
       // Area is visible — check each item
       area.drops.forEach(function (drop) {
-        if (REVERSE_DETECT[drop.item]) {
-          // Reverse detection: look for the actual item image
-          var posSlug = itemSlugPositive(drop.item);
-          if (!refs[posSlug]) return;
+        var slug = itemSlug(drop.item);
 
-          if (imageFound(posSlug)) {
-            // Item image found on screen — item IS obtained
-            changes[drop.item] = true;
-          } else {
-            // Item image NOT found — item NOT obtained
+        if (REVERSE_DETECT[drop.item]) {
+          // Dual detection: try both -n and positive image
+          var posSlug = itemSlugPositive(drop.item);
+          var hasNeg = refs[slug] && imageFound(slug);
+          var hasPos = refs[posSlug] && imageFound(posSlug);
+
+          if (hasNeg) {
+            // Empty slot found — item NOT obtained
             changes[drop.item] = false;
+            hasChanges = true;
+          } else if (hasPos) {
+            // Item image found — item IS obtained
+            changes[drop.item] = true;
+            hasChanges = true;
           }
+          // Neither matched — skip, don't update
         } else {
           // Normal detection: look for the -n (empty slot) image
-          var slug = itemSlug(drop.item);
           if (!refs[slug]) return;
 
           if (imageFound(slug)) {
@@ -189,8 +194,8 @@
             // Empty slot NOT found — item IS obtained
             changes[drop.item] = true;
           }
+          hasChanges = true;
         }
-        hasChanges = true;
       });
     });
 
