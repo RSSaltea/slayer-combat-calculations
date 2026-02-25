@@ -175,14 +175,20 @@
         if (REVERSE_DETECT[drop.item]) {
           // Check -f (found) image — obtained item screenshot
           var fSlug = itemSlugFound(drop.item);
-          if (refs[fSlug] && imageFound(fSlug)) {
+          var fLoaded = !!refs[fSlug];
+          var fMatch = fLoaded && imageFound(fSlug);
+          console.log('[UltDetect] ' + drop.item + ': -f loaded=' + fLoaded + ', match=' + fMatch);
+          if (fMatch) {
             changes[drop.item] = true;
             hasChanges = true;
             return;
           }
           // Check positive image
           var posSlug = itemSlugPositive(drop.item);
-          if (refs[posSlug] && imageFound(posSlug)) {
+          var posLoaded = !!refs[posSlug];
+          var posMatch = posLoaded && imageFound(posSlug);
+          console.log('[UltDetect] ' + drop.item + ': pos loaded=' + posLoaded + ', match=' + posMatch);
+          if (posMatch) {
             changes[drop.item] = true;
             hasChanges = true;
             return;
