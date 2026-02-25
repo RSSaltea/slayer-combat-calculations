@@ -87,6 +87,10 @@
     return itemName.replace(/\s+/g, '_');
   }
 
+  function itemSlugFound(itemName) {
+    return itemName.replace(/\s+/g, '_') + '-f';
+  }
+
   // Items where -n detection is unreliable — detect the actual item image instead
   var REVERSE_DETECT = {
     'Steadfast Boots': true,
@@ -123,17 +127,19 @@
       }
     });
 
-    // Load -n item images for all drops (+ positive images for reverse-detect items)
+    // Load -n, -f, and positive item images for all drops
     ULTIMATE_AREAS.forEach(function (area) {
       area.drops.forEach(function (drop) {
         var slug = itemSlug(drop.item);
-        var path = 'images/ultimate/' + slug + '.png';
-        promises.push(loadRef(slug, path));
+        promises.push(loadRef(slug, 'images/ultimate/' + slug + '.png'));
+
+        // -f (found/obtained) image — used as extra positive detection
+        var fSlug = itemSlugFound(drop.item);
+        promises.push(loadRef(fSlug, 'images/ultimate/' + fSlug + '.png'));
 
         if (REVERSE_DETECT[drop.item]) {
           var posSlug = itemSlugPositive(drop.item);
-          var posPath = 'images/ultimate/' + posSlug + '.png';
-          promises.push(loadRef(posSlug, posPath));
+          promises.push(loadRef(posSlug, 'images/ultimate/' + posSlug + '.png'));
         }
       });
     });
@@ -166,12 +172,19 @@
       // Area is visible — check each item
       area.drops.forEach(function (drop) {
         var slug = itemSlug(drop.item);
+        var fSlug = itemSlugFound(drop.item);
+
+        // Check -f (found) image first — if present and matched, item IS obtained
+        if (refs[fSlug] && imageFound(fSlug)) {
+          changes[drop.item] = true;
+          hasChanges = true;
+          return;
+        }
 
         if (REVERSE_DETECT[drop.item]) {
           // -n images are identical for these items so only use positive detection
           var posSlug = itemSlugPositive(drop.item);
           if (refs[posSlug] && imageFound(posSlug)) {
-            // Item image found — item IS obtained
             changes[drop.item] = true;
             hasChanges = true;
           }
