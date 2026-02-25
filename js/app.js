@@ -148,6 +148,11 @@
   function isCategoryEligible(catId) {
     // Check persuade lock
     if (PERSUADE_TASKS.indexOf(catId) !== -1 && !state.persuadeUnlocks.has(catId)) return false;
+    // Cluster categories: eligible if any sub-category is eligible
+    var subCats = CLUSTER_ID_TO_SUBCATS[catId];
+    if (subCats) {
+      return subCats.some(function (subId) { return isCategoryEligible(subId); });
+    }
     // Check if all non-cluster monsters in this category are locked
     var cat = TASK_CATEGORIES.find(function (c) { return c.id === catId; });
     if (!cat) return false;
@@ -925,6 +930,17 @@
 
   // ── Prefer / Block List ────────────────────────────────────────────
   function getBestForCategory(catId, metric) {
+    // Cluster categories: return best across all sub-categories
+    var subCats = CLUSTER_ID_TO_SUBCATS[catId];
+    if (subCats) {
+      var best = 0;
+      subCats.forEach(function (subId) {
+        var val = getBestForCategory(subId, metric);
+        if (val > best) best = val;
+      });
+      return best;
+    }
+
     var cat = TASK_CATEGORIES.find(function (c) { return c.id === catId; });
     if (!cat) return 0;
     var best = 0;
@@ -1191,11 +1207,20 @@
   };
 
   // Cluster tasks that span multiple categories (player picks best monster)
+  // id = TASK_CATEGORIES id for prefer/block (null = uses existing single category)
   var CLUSTER_WEIGHT_CATS = {
-    "Demons": ["black_demons", "abyssal_demons", "kalgerion_demons", "ripper_demons", "greater_demons"],
-    "Dragons": ["black_dragons", "celestial_dragons", "rune_dragons", "adamant_dragons", "gemstone_dragons", "iron_dragons", "mithril_dragons", "steel_dragons", "nodon"],
-    "Strykewyrms": ["strykewyrms"],
+    "Demons": { cats: ["black_demons", "abyssal_demons", "kalgerion_demons", "ripper_demons", "greater_demons"], id: "cluster_demons" },
+    "Dragons": { cats: ["black_dragons", "celestial_dragons", "rune_dragons", "adamant_dragons", "gemstone_dragons", "iron_dragons", "mithril_dragons", "steel_dragons", "nodon"], id: "cluster_dragons" },
+    "Strykewyrms": { cats: ["strykewyrms"], id: "strykewyrms" },
+    "Undead": { cats: ["edimmus"], id: "cluster_undead" },
   };
+
+  // Reverse map: cluster category ID → sub-category array
+  var CLUSTER_ID_TO_SUBCATS = {};
+  for (var _ck in CLUSTER_WEIGHT_CATS) {
+    var _cl = CLUSTER_WEIGHT_CATS[_ck];
+    if (_cl.id) CLUSTER_ID_TO_SUBCATS[_cl.id] = _cl.cats;
+  }
 
   function updateWeightedAverage() {
     var bar = document.getElementById('weighted-avg-bar');
@@ -1234,20 +1259,27 @@
           gpHr = getBestForCategory(catId, 'gpHr');
         }
       } else if (clusterCats) {
-        // Cluster: excluded only if ALL sub-categories are excluded/locked
-        var eligible = clusterCats.filter(function (id) {
-          if (excludedSet.has(id)) return false;
-          if (persuadeSet.has(id) && !state.persuadeUnlocks.has(id)) return false;
-          return true;
-        });
-        if (eligible.length === 0) { isExcluded = true; }
+        var clusterId = clusterCats.id;
+        var subCats = clusterCats.cats;
+        // Cluster itself blocked/skipped
+        if (clusterId && excludedSet.has(clusterId)) { isExcluded = true; }
         if (!isExcluded) {
-          // Use best XP/hr across eligible sub-categories
-          eligible.forEach(function (id) {
-            slayXpHr = Math.max(slayXpHr, getBestForCategory(id, 'slayXpHr'));
-            combatXpHr = Math.max(combatXpHr, getBestForCategory(id, 'combatXpHr'));
-            gpHr = Math.max(gpHr, getBestForCategory(id, 'gpHr'));
+          // Also excluded if ALL sub-categories are excluded/locked
+          var eligible = subCats.filter(function (id) {
+            if (excludedSet.has(id)) return false;
+            if (persuadeSet.has(id) && !state.persuadeUnlocks.has(id)) return false;
+            return true;
           });
+          if (eligible.length === 0) { isExcluded = true; }
+          if (!isExcluded) {
+            isPreferred = clusterId ? state.prefer.has(clusterId) : false;
+            // Use best XP/hr across eligible sub-categories
+            eligible.forEach(function (id) {
+              slayXpHr = Math.max(slayXpHr, getBestForCategory(id, 'slayXpHr'));
+              combatXpHr = Math.max(combatXpHr, getBestForCategory(id, 'combatXpHr'));
+              gpHr = Math.max(gpHr, getBestForCategory(id, 'gpHr'));
+            });
+          }
         }
       } else {
         continue; // Unknown key, skip
@@ -1778,7 +1810,7 @@
     ctx.font = '400 10px Inter, sans-serif';
     ctx.fillStyle = TEXT_MUTED;
     ctx.textAlign = 'center';
-    ctx.fillText('Slayer & Combat Calculations v2.2', W / 2, totalH - PAD + 4);
+    ctx.fillText('Slayer & Combat Calculations v2.2.1', W / 2, totalH - PAD + 4);
     ctx.textAlign = 'left';
 
     // Download

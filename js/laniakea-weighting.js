@@ -66,6 +66,7 @@ const LANIAKEA_WEIGHTS = {
   "Order of Ascension": 10,
   "Steel Dragons": 9,
   "Strykewyrms": 4,
+  "Undead": 4,
   "Vyrewatch": 7,
   "Profane Scabarites": 12,
 };

@@ -143,6 +143,9 @@ const TASK_CATEGORIES = [
   { id: "camel_warriors", label: "Camel Warriors", monsters: ["Camel Warriors"] },
   { id: "celestial_dragons", label: "Celestial Dragons", monsters: ["Celestial Dragons"] },
   { id: "chaos_giants", label: "Chaos Giants", monsters: ["Chaos Giants"] },
+  { id: "cluster_demons", label: "Demons (Cluster)", monsters: [] },
+  { id: "cluster_dragons", label: "Dragons (Cluster)", monsters: [] },
+  { id: "cluster_undead", label: "Undead (Cluster)", monsters: [] },
   { id: "corrupted_creatures", label: "Corrupted Creatures", monsters: ["Corrupted Workers"] },
   { id: "cresbots", label: "Cres's Creations", monsters: ["Cresbots"] },
   { id: "crystal_shapeshifters", label: "Crystal Shapeshifters", monsters: ["Crystal Shapeshifters"] },
@@ -257,6 +260,7 @@ const PERSUADE_TASKS = ["aquanites", "muspahs", "nihils", "glacors", "tormented_
 
 // Changelog data
 const CHANGELOG = [
+  { date: "25/02/2026", version: "2.2.1", note: "Added Demons, Dragons, and Undead cluster tasks to Prefer/Block list as separate assignable tasks with their own Laniakea weights. Clusters can now be preferred/blocked independently of individual tasks.", change: "Cluster tasks in Prefer/Block" },
   { date: "25/02/2026", version: "2.2", note: "New Ultimate Slayer drop tracker tab with 13 areas, 244 items, item images, obtained/unobtained toggle, expandable drop details. Added Slayer Introspection min/max per-task toggle. Fixed private RuneMetrics assuming all quests completed.", change: "Ultimate Slayer tab + Introspection" },
   { date: "25/02/2026", version: "2.1", note: "Added minTask data, fixed scrim/KPH propagation to Prefer/Block, moved Skip to Slayer Tasks tab, added lock checks to Prefer/Block, added missing quest requirements.", change: "Major Prefer/Block overhaul" },
   { date: "24/02/2026", version: "2.0", note: "Major rewrite: base data, editable KPH, merged tabs, per-monster scrimshaw, prefer/block auto-fill.", change: "Restructured to GitHub Pages site" },
