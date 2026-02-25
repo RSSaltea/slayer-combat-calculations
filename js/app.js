@@ -1211,7 +1211,7 @@
   var CLUSTER_WEIGHT_CATS = {
     "Demons": { cats: ["black_demons", "abyssal_demons", "kalgerion_demons", "ripper_demons", "greater_demons"], id: "cluster_demons" },
     "Dragons": { cats: ["black_dragons", "celestial_dragons", "rune_dragons", "adamant_dragons", "gemstone_dragons", "iron_dragons", "mithril_dragons", "steel_dragons", "nodon"], id: "cluster_dragons" },
-    "Strykewyrms": { cats: ["strykewyrms"], id: "strykewyrms" },
+    "Strykewyrms": { cats: ["strykewyrms"], id: null },
     "Undead": { cats: ["edimmus"], id: "cluster_undead" },
   };
 
@@ -1272,7 +1272,7 @@
           });
           if (eligible.length === 0) { isExcluded = true; }
           if (!isExcluded) {
-            isPreferred = clusterId ? state.prefer.has(clusterId) : false;
+            isPreferred = clusterId ? state.prefer.has(clusterId) : subCats.some(function (id) { return state.prefer.has(id); });
             // Use best XP/hr across eligible sub-categories
             eligible.forEach(function (id) {
               slayXpHr = Math.max(slayXpHr, getBestForCategory(id, 'slayXpHr'));
