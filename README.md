@@ -4,7 +4,7 @@ An Alt1 Toolkit plugin and standalone web tool for RuneScape Slayer task calcula
 
 ## Installation
 
-[![Install in Alt1](https://img.shields.io/badge/Install_in-Alt1_Toolkit-c98736?style=for-the-badge&logo=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3RAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAABhSURBVDhPY/j//z8DEIMBIwMKwCdJECRBDmBioBIYNRgZkIIYJERNp/7//59BkJuNAUMjAwMDg5+jOQM2jTBNYIkzl+4zCHKxYWrEpgkscebyPQZBbnZMjbg0gSUoAQBZhCEPfNkKxgAAAABJRU5ErkJggg==)](alt1://addapp/https://rssaltea.github.io/slayer-combat-calculations/appconfig.json)
+[![Install in Alt1](https://img.shields.io/badge/Install_in-Alt1_Toolkit-c98736?style=for-the-badge&logo=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3RAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAABhSURBVDhPY/j//z8DEIMBIwMKwCdJECRBDmBioBIYNRgZkIIYJERNp/7//59BkJuNAUMjAwMDg5+jOQM2jTBNYIkzl+4zCHKxYWrEpgkscebyPQZBbnZMjbg0gSUoAQBZhCEPfNkKxgAAAABJRU5ErkJggg==)](https://rssaltea.github.io/slayer-combat-calculations/install.html)
 
 > Requires [Alt1 Toolkit](https://runeapps.org/alt1) to be installed.
 
