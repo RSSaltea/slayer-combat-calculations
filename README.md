@@ -11,7 +11,7 @@ An Alt1 Toolkit plugin and standalone web tool for RuneScape Slayer task calcula
 ## Features
 
 ### Home
-- **Slayer boost toggles** — Slayer Helmet, Genocide, Scrimshaw, Contracts, 120 Cape perk, and more.
+- **Slayer boost toggles** — Scrimshaw, Contracts, 120 Cape perk, and more.
 - **Real-time multiplier bar** — see your combined XP/GP multipliers at a glance.
 - **Player lookup** — fetches your stats from RuneMetrics to auto-lock/unlock tasks.
 
@@ -27,7 +27,7 @@ An Alt1 Toolkit plugin and standalone web tool for RuneScape Slayer task calcula
 - **Export to PNG** — share your Prefer/Block setup as an image.
 
 ### Ultimate Slayer
-- **Collection log tracker** — 256 items across 14 areas.
+- **Collection log tracker**
 - **Alt1 image detection** — automatically detects obtained items from the in-game collection log.
 - **Check button** — continuous scanning when running inside Alt1.
 - **Export** — export individual areas or the full log as PNG.
