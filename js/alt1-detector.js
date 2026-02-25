@@ -168,21 +168,14 @@
         var slug = itemSlug(drop.item);
 
         if (REVERSE_DETECT[drop.item]) {
-          // Dual detection: try both -n and positive image
+          // -n images are identical for these items so only use positive detection
           var posSlug = itemSlugPositive(drop.item);
-          var hasNeg = refs[slug] && imageFound(slug);
-          var hasPos = refs[posSlug] && imageFound(posSlug);
-
-          if (hasNeg) {
-            // Empty slot found — item NOT obtained
-            changes[drop.item] = false;
-            hasChanges = true;
-          } else if (hasPos) {
+          if (refs[posSlug] && imageFound(posSlug)) {
             // Item image found — item IS obtained
             changes[drop.item] = true;
             hasChanges = true;
           }
-          // Neither matched — skip, don't update
+          // Not found — leave state unchanged (manual toggle)
         } else {
           // Normal detection: look for the -n (empty slot) image
           if (!refs[slug]) return;
