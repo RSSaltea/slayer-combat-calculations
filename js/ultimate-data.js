@@ -353,6 +353,7 @@ var ULTIMATE_AREAS = [
       { item: "Blue Dragon Egg",                 monster: "Blue Dragon",       rate: "Very Rare" },
       { item: "Green Dragon Egg",                monster: "Green Dragon",      rate: "Very Rare" },
       { item: "Black Dragon Egg",                monster: "Black Dragon",      rate: "Very Rare" },
+      { item: "Bone Fragments",                  monster: "Various",           rate: "Varies",    onTask: true },
     ]
   },
 ];
