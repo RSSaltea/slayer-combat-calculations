@@ -262,7 +262,8 @@ const PERSUADE_TASKS = ["aquanites", "muspahs", "nihils", "glacors", "tormented_
 
 // Changelog data
 const CHANGELOG = [
-  { date: "25/02/2026", version: "2.2.1", note: "Added Demons, Dragons, and Undead cluster tasks to Prefer/Block list as separate assignable tasks with their own Laniakea weights. Clusters can now be preferred/blocked independently of individual tasks.", change: "Cluster tasks in Prefer/Block" },
+  { date: "25/02/2026", version: "2.2.2", note: "Added Senntisten area (8 items) to Ultimate Slayer. Replaced all item images with inventory icons from the Slayer collection log. Added Spectral Lens and Greater Sonic Wave Ability Codex.", change: "Senntisten area + collection log icons" },
+  { date: "25/02/2026", version: "2.2.1", note: "Added Demons, Dragons, Undead, and Strykewyrms cluster tasks to Prefer/Block list. Split Lava/Ice Strykewyrms into separate tasks. Clusters can now be preferred/blocked independently.", change: "Cluster tasks in Prefer/Block" },
   { date: "25/02/2026", version: "2.2", note: "New Ultimate Slayer drop tracker tab with 13 areas, 244 items, item images, obtained/unobtained toggle, expandable drop details. Added Slayer Introspection min/max per-task toggle. Fixed private RuneMetrics assuming all quests completed.", change: "Ultimate Slayer tab + Introspection" },
   { date: "25/02/2026", version: "2.1", note: "Added minTask data, fixed scrim/KPH propagation to Prefer/Block, moved Skip to Slayer Tasks tab, added lock checks to Prefer/Block, added missing quest requirements.", change: "Major Prefer/Block overhaul" },
   { date: "24/02/2026", version: "2.0", note: "Major rewrite: base data, editable KPH, merged tabs, per-monster scrimshaw, prefer/block auto-fill.", change: "Restructured to GitHub Pages site" },
