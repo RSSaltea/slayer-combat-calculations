@@ -229,8 +229,12 @@
       var gpData = GP_PER_KILL[m.name];
       if (gpData) {
         gpPerKill = state.boosts.offTask ? gpData.offTask : gpData.onTask;
-        if (state.boosts.bindingContracts && gpData.contracts) {
-          gpPerKill += gpData.contracts;
+        if (state.boosts.bindingContracts) {
+          if (state.boosts.tetraContracts && gpData.tetra) {
+            gpPerKill += gpData.tetra;
+          } else if (gpData.binding) {
+            gpPerKill += gpData.binding;
+          }
         }
       }
     }
@@ -348,7 +352,7 @@
       { key: 'slayerBxp', label: 'Slayer BXP', badge: '+100%' },
       { key: 'combatBxp', label: 'Combat BXP', badge: '+100%' },
       { key: 'offTask', label: 'Off Task (GP/HR)', badge: '' },
-      { key: 'lv120Slayer', label: '120 Slayer', badge: '' },
+      { key: 'lv120Slayer', label: '120 Slayer', badge: '20% choice' },
       { key: 'bindingContracts', label: 'Binding Contracts', badge: '' },
       { key: 'tetraContracts', label: 'Tetra Contracts', badge: '' },
       { key: 'scrimshaw', label: 'Scrimshaw of Sacrifice', badge: '+50%' },
@@ -356,19 +360,41 @@
       { key: 'slayerIntrospection', label: 'Slayer Introspection', badge: '' },
     ];
 
+    var boostElements = {};
     boostDefs.forEach(function (def) {
       var item = document.createElement('div');
-      item.className = 'boost-item' + (state.boosts[def.key] ? ' active' : '');
+      var isDisabled = def.key === 'tetraContracts' && !state.boosts.bindingContracts;
+      item.className = 'boost-item' + (state.boosts[def.key] ? ' active' : '') + (isDisabled ? ' disabled' : '');
       item.innerHTML =
         '<div class="toggle"></div>' +
         '<span class="label">' + def.label + '</span>' +
         (def.badge ? '<span class="badge">' + def.badge + '</span>' : '');
       item.addEventListener('click', function () {
+        // Tetra requires Binding
+        if (def.key === 'tetraContracts' && !state.boosts.bindingContracts) return;
+
         state.boosts[def.key] = !state.boosts[def.key];
         item.classList.toggle('active', state.boosts[def.key]);
+
+        // When Binding is toggled off, also disable Tetra
+        if (def.key === 'bindingContracts' && !state.boosts.bindingContracts) {
+          state.boosts.tetraContracts = false;
+          if (boostElements.tetraContracts) {
+            boostElements.tetraContracts.classList.remove('active');
+            boostElements.tetraContracts.classList.add('disabled');
+          }
+        }
+        // When Binding is toggled on, enable Tetra toggle (but don't auto-activate)
+        if (def.key === 'bindingContracts' && state.boosts.bindingContracts) {
+          if (boostElements.tetraContracts) {
+            boostElements.tetraContracts.classList.remove('disabled');
+          }
+        }
+
         updateAll();
         saveState();
       });
+      boostElements[def.key] = item;
       grid.appendChild(item);
     });
 
@@ -1222,19 +1248,17 @@
     if (_cl.id) CLUSTER_ID_TO_SUBCATS[_cl.id] = _cl.cats;
   }
 
-  function updateWeightedAverage() {
-    var bar = document.getElementById('weighted-avg-bar');
-    if (!bar) return;
-    if (typeof LANIAKEA_WEIGHTS === 'undefined') return;
+  // Shared helper: compute weighted average XP/hr and GP/hr across Laniakea tasks
+  // Returns { avgSlay, avgCombat, avgGp } (rounded) or null if no eligible tasks
+  function computeWeightedAverages() {
+    if (typeof LANIAKEA_WEIGHTS === 'undefined') return null;
 
     var excludedSet = new Set();
     state.block.forEach(function (id) { excludedSet.add(id); });
     state.skip.forEach(function (id) { excludedSet.add(id); });
 
-    // Check if persuade tasks are unlocked
     var persuadeSet = new Set(PERSUADE_TASKS);
 
-    // Build entries from each LANIAKEA_WEIGHTS key
     var entries = [];
     var totalWeight = 0;
     var preferWeight = 0;
@@ -1249,7 +1273,6 @@
       var isPreferred = false;
 
       if (catId) {
-        // Single category mapping
         if (excludedSet.has(catId)) { isExcluded = true; }
         if (persuadeSet.has(catId) && !state.persuadeUnlocks.has(catId)) { isExcluded = true; }
         if (!isExcluded) {
@@ -1261,10 +1284,8 @@
       } else if (clusterCats) {
         var clusterId = clusterCats.id;
         var subCats = clusterCats.cats;
-        // Cluster itself blocked/skipped
         if (clusterId && excludedSet.has(clusterId)) { isExcluded = true; }
         if (!isExcluded) {
-          // Also excluded if ALL sub-categories are excluded/locked
           var eligible = subCats.filter(function (id) {
             if (excludedSet.has(id)) return false;
             if (persuadeSet.has(id) && !state.persuadeUnlocks.has(id)) return false;
@@ -1273,7 +1294,6 @@
           if (eligible.length === 0) { isExcluded = true; }
           if (!isExcluded) {
             isPreferred = clusterId ? state.prefer.has(clusterId) : subCats.some(function (id) { return state.prefer.has(id); });
-            // Use best XP/hr across eligible sub-categories
             eligible.forEach(function (id) {
               slayXpHr = Math.max(slayXpHr, getBestForCategory(id, 'slayXpHr'));
               combatXpHr = Math.max(combatXpHr, getBestForCategory(id, 'combatXpHr'));
@@ -1282,7 +1302,7 @@
           }
         }
       } else {
-        continue; // Unknown key, skip
+        continue;
       }
 
       if (isExcluded) continue;
@@ -1292,15 +1312,9 @@
       entries.push({ w: w, isPreferred: isPreferred, slayXpHr: slayXpHr, combatXpHr: combatXpHr, gpHr: gpHr });
     }
 
-    if (totalWeight === 0) {
-      bar.innerHTML = '<div class="avg-item"><span class="avg-label">No eligible tasks</span></div>';
-      return;
-    }
+    if (totalWeight === 0) return null;
 
-    // Double-roll prefer mechanic (silent second roll):
-    //   P(preferred task i) = pi * (2 - Sp/S)
-    //   P(non-preferred task j) = pj * (1 - Sp/S)
-    // where pi = wi/S, Sp = sum of preferred weights, S = totalWeight
+    // Double-roll prefer mechanic (silent second roll)
     var spRatio = preferWeight / totalWeight;
     var avgSlay = 0, avgCombat = 0, avgGp = 0;
 
@@ -1312,10 +1326,36 @@
       avgGp += pct * e.gpHr;
     });
 
+    // 120 Slayer cape perk: 20% chance to choose best task per metric
+    if (state.boosts.lv120Slayer) {
+      var bestSlay = 0, bestCombat = 0, bestGp = 0;
+      entries.forEach(function (e) {
+        if (e.slayXpHr > bestSlay) bestSlay = e.slayXpHr;
+        if (e.combatXpHr > bestCombat) bestCombat = e.combatXpHr;
+        if (e.gpHr > bestGp) bestGp = e.gpHr;
+      });
+      avgSlay = 0.8 * avgSlay + 0.2 * bestSlay;
+      avgCombat = 0.8 * avgCombat + 0.2 * bestCombat;
+      avgGp = 0.8 * avgGp + 0.2 * bestGp;
+    }
+
+    return { avgSlay: Math.round(avgSlay), avgCombat: Math.round(avgCombat), avgGp: Math.round(avgGp) };
+  }
+
+  function updateWeightedAverage() {
+    var bar = document.getElementById('weighted-avg-bar');
+    if (!bar) return;
+
+    var result = computeWeightedAverages();
+    if (!result) {
+      bar.innerHTML = '<div class="avg-item"><span class="avg-label">No eligible tasks</span></div>';
+      return;
+    }
+
     bar.innerHTML =
-      '<div class="avg-item"><span class="avg-label">Weighted Avg Slay XP/Hr</span> <span class="avg-value">' + fmtShort(Math.round(avgSlay)) + '</span></div>' +
-      '<div class="avg-item"><span class="avg-label">Weighted Avg Combat XP/Hr</span> <span class="avg-value">' + fmtShort(Math.round(avgCombat)) + '</span></div>' +
-      '<div class="avg-item"><span class="avg-label">Weighted Avg GP/Hr</span> <span class="avg-value">' + fmtShort(Math.round(avgGp)) + '</span></div>';
+      '<div class="avg-item"><span class="avg-label">Weighted Avg Slay XP/Hr</span> <span class="avg-value">' + fmtShort(result.avgSlay) + '</span></div>' +
+      '<div class="avg-item"><span class="avg-label">Weighted Avg Combat XP/Hr</span> <span class="avg-value">' + fmtShort(result.avgCombat) + '</span></div>' +
+      '<div class="avg-item"><span class="avg-label">Weighted Avg GP/Hr</span> <span class="avg-value">' + fmtShort(result.avgGp) + '</span></div>';
   }
 
   // ── Persuade Toggles ──────────────────────────────────────────────
@@ -1416,6 +1456,206 @@
       renderTasksTable();
       updateWeightedAverage();
     });
+  }
+
+  // ── Prefer / Block Export ─────────────────────────────────────────
+  function initPrefBlockExport() {
+    var btn = document.getElementById('prefblock-export-btn');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+      exportPrefBlockImage();
+    });
+  }
+
+  function exportPrefBlockImage() {
+    // Gather prefer and block lists with their stat values
+    var metric = state.sortCol || 'slayXpHr';
+    var preferItems = [];
+    var blockItems = [];
+
+    TASK_CATEGORIES.forEach(function (cat) {
+      var bestVal = getBestForCategory(cat.id, metric);
+      if (state.prefer.has(cat.id)) {
+        preferItems.push({ label: cat.label, value: bestVal });
+      } else if (state.block.has(cat.id)) {
+        blockItems.push({ label: cat.label, value: bestVal });
+      }
+    });
+
+    var avgResult = computeWeightedAverages() || { avgSlay: 0, avgCombat: 0, avgGp: 0 };
+
+    drawPrefBlockCanvas(preferItems, blockItems, metric, avgResult);
+  }
+
+  function drawPrefBlockCanvas(preferItems, blockItems, metric, avgStats) {
+    // Layout constants
+    var W = 700;
+    var PAD = 24;
+    var COL_W = (W - PAD * 3) / 2; // Two columns with gap
+    var ROW_H = 34;
+    var maxRows = Math.max(preferItems.length, blockItems.length, 1);
+
+    // Metric labels
+    var METRIC_LABELS = {
+      slayXpHr: 'Slay XP/Hr', combatXpHr: 'Combat XP/Hr', gpHr: 'GP/Hr',
+      gpTask: 'GP/Task', slayXpTask: 'Slay XP/Task', combatXpTask: 'Combat XP/Task',
+      minsTask: 'Mins/Task'
+    };
+    var metricLabel = METRIC_LABELS[metric] || metric;
+
+    // Colors
+    var BG = '#0a0c10';
+    var BG_CARD = '#181c26';
+    var GOLD = '#c9aa58';
+    var GREEN = '#4caf50';
+    var RED = '#e57373';
+    var TEXT = '#e8e6e3';
+    var TEXT_SEC = '#9ca3b0';
+    var TEXT_MUTED = '#5a6270';
+
+    // Calculate height
+    var totalH = PAD;      // top
+    totalH += 36;           // title row
+    totalH += 30;           // weighted avg stats row 1
+    totalH += 22;           // weighted avg stats row 2
+    totalH += 18;           // gap
+    totalH += 28;           // column headers
+    totalH += maxRows * ROW_H + 6; // rows
+    totalH += 30;           // footer
+    totalH += PAD;          // bottom
+
+    var canvas = document.createElement('canvas');
+    canvas.width = W;
+    canvas.height = totalH;
+    var ctx = canvas.getContext('2d');
+
+    // Background
+    ctx.fillStyle = BG;
+    ctx.fillRect(0, 0, W, totalH);
+
+    var y = PAD;
+
+    // Title
+    ctx.font = '600 20px Cinzel, serif';
+    ctx.fillStyle = GOLD;
+    ctx.textBaseline = 'middle';
+    ctx.fillText('Prefer / Block List', PAD, y + 14);
+
+    ctx.font = '400 12px Inter, sans-serif';
+    ctx.fillStyle = TEXT_MUTED;
+    ctx.textAlign = 'right';
+    ctx.fillText('Sorted by ' + metricLabel, W - PAD, y + 14);
+    ctx.textAlign = 'left';
+    y += 36;
+
+    // Weighted average stats
+    ctx.fillStyle = BG_CARD;
+    roundRect(ctx, PAD, y, W - PAD * 2, 44, 6);
+    ctx.fill();
+
+    var statsX = PAD + 14;
+    ctx.font = '500 11px Inter, sans-serif';
+    ctx.fillStyle = TEXT_SEC;
+    ctx.fillText('Weighted Averages (Laniakea)', statsX, y + 14);
+
+    ctx.font = '400 11px Inter, sans-serif';
+    var statItems = [
+      { label: 'Slay XP/Hr', value: fmtShort(avgStats.avgSlay) },
+      { label: 'Combat XP/Hr', value: fmtShort(avgStats.avgCombat) },
+      { label: 'GP/Hr', value: fmtShort(avgStats.avgGp) },
+    ];
+    var statSpacing = (W - PAD * 2 - 28) / statItems.length;
+    statItems.forEach(function (s, i) {
+      var sx = statsX + i * statSpacing;
+      ctx.fillStyle = TEXT_MUTED;
+      ctx.fillText(s.label + ':', sx, y + 34);
+      ctx.fillStyle = GOLD;
+      ctx.fillText(s.value, sx + ctx.measureText(s.label + ': ').width, y + 34);
+    });
+    y += 52;
+
+    y += 6; // gap
+
+    // Column headers
+    var leftX = PAD;
+    var rightX = PAD + COL_W + PAD;
+
+    ctx.font = '600 13px Inter, sans-serif';
+    ctx.fillStyle = GREEN;
+    ctx.fillText('Prefer (' + preferItems.length + '/8)', leftX, y + 12);
+
+    ctx.fillStyle = RED;
+    ctx.fillText('Block (' + blockItems.length + '/8)', rightX, y + 12);
+    y += 28;
+
+    // Draw rows
+    for (var i = 0; i < maxRows; i++) {
+      var iy = y + i * ROW_H;
+
+      // Prefer column
+      if (i < preferItems.length) {
+        var pi = preferItems[i];
+        // Row bg
+        ctx.fillStyle = BG_CARD;
+        roundRect(ctx, leftX, iy, COL_W, ROW_H - 4, 4);
+        ctx.fill();
+        // Green left accent
+        ctx.fillStyle = '#2d6b30';
+        ctx.fillRect(leftX, iy + 3, 3, ROW_H - 10);
+        // Name
+        ctx.font = '400 12px Inter, sans-serif';
+        ctx.fillStyle = TEXT;
+        var pName = pi.label;
+        var pMaxW = COL_W - 80;
+        while (ctx.measureText(pName).width > pMaxW && pName.length > 3) pName = pName.slice(0, -1);
+        if (pName !== pi.label) pName += '\u2026';
+        ctx.fillText(pName, leftX + 12, iy + ROW_H / 2 - 1);
+        // Value
+        ctx.fillStyle = GOLD;
+        ctx.textAlign = 'right';
+        ctx.fillText(pi.value > 0 ? fmtShort(pi.value) : '-', leftX + COL_W - 10, iy + ROW_H / 2 - 1);
+        ctx.textAlign = 'left';
+      }
+
+      // Block column
+      if (i < blockItems.length) {
+        var bi = blockItems[i];
+        ctx.fillStyle = BG_CARD;
+        roundRect(ctx, rightX, iy, COL_W, ROW_H - 4, 4);
+        ctx.fill();
+        // Red left accent
+        ctx.fillStyle = '#6b2d2d';
+        ctx.fillRect(rightX, iy + 3, 3, ROW_H - 10);
+        // Name
+        ctx.font = '400 12px Inter, sans-serif';
+        ctx.fillStyle = TEXT;
+        var bName = bi.label;
+        var bMaxW = COL_W - 80;
+        while (ctx.measureText(bName).width > bMaxW && bName.length > 3) bName = bName.slice(0, -1);
+        if (bName !== bi.label) bName += '\u2026';
+        ctx.fillText(bName, rightX + 12, iy + ROW_H / 2 - 1);
+        // Value
+        ctx.fillStyle = GOLD;
+        ctx.textAlign = 'right';
+        ctx.fillText(bi.value > 0 ? fmtShort(bi.value) : '-', rightX + COL_W - 10, iy + ROW_H / 2 - 1);
+        ctx.textAlign = 'left';
+      }
+    }
+
+    y += maxRows * ROW_H + 6;
+
+    // Footer
+    ctx.font = '400 10px Inter, sans-serif';
+    ctx.fillStyle = TEXT_MUTED;
+    ctx.textAlign = 'center';
+    ctx.fillText('Slayer & Combat Calculations v2.2.4', W / 2, y + 10);
+    ctx.textAlign = 'left';
+
+    // Download
+    var link = document.createElement('a');
+    link.download = 'prefer-block-list.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
   }
 
   // ── To-Do List ─────────────────────────────────────────────────────
@@ -1810,7 +2050,7 @@
     ctx.font = '400 10px Inter, sans-serif';
     ctx.fillStyle = TEXT_MUTED;
     ctx.textAlign = 'center';
-    ctx.fillText('Slayer & Combat Calculations v2.2.1', W / 2, totalH - PAD + 4);
+    ctx.fillText('Slayer & Combat Calculations v2.2.4', W / 2, totalH - PAD + 4);
     ctx.textAlign = 'left';
 
     // Download
@@ -1859,6 +2099,7 @@
     initBoosts();
     initTasksTable();
     initPrefBlockControls();
+    initPrefBlockExport();
     renderPersuadeToggles();
     updateAll();
     renderTodoList();

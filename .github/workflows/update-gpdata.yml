@@ -42,18 +42,22 @@ jobs:
 
           results = {}
           for row in rows:
-              if len(row) > 6 and row[3].strip() and row[3].strip() not in ['', 'Creature Name', 'Drop Calculator', 'End result', 'Range (quantity)', 'Drop rate']:
+              if len(row) > 13 and row[3].strip() and row[3].strip() not in ['', 'Creature Name', 'Drop Calculator', 'End result', 'Range (quantity)', 'Drop rate']:
                   name = row[3].strip()
                   try:
                       on_task = float(row[4].strip().replace(',','')) if row[4].strip() else 0
                       off_task = float(row[5].strip().replace(',','')) if row[5].strip() else 0
-                      contracts = float(row[6].strip().replace(',','')) if row[6].strip() else 0
+                      # Column K (index 10) = Tetra Contracts GP/kill
+                      tetra = float(row[10].strip().replace(',','')) if len(row) > 10 and row[10].strip() else 0
+                      # Column N (index 13) = Binding Contracts GP/kill
+                      binding = float(row[13].strip().replace(',','')) if len(row) > 13 and row[13].strip() else 0
                       # Skip non-creature entries (numbers)
                       if any(c.isalpha() for c in name):
                           results[name] = {
                               'onTask': round(on_task, 2),
                               'offTask': round(off_task, 2),
-                              'contracts': round(contracts, 2)
+                              'binding': round(binding, 2),
+                              'tetra': round(tetra, 2)
                           }
                   except (ValueError, IndexError):
                       pass
@@ -63,10 +67,10 @@ jobs:
           with open('js/gpdata.js', 'w') as f:
               f.write(f'// GP per kill data - auto-updated from Google Sheets\n')
               f.write(f'// Last updated: {now}\n')
-              f.write('// onTask = on-task GP/kill, offTask = off-task GP/kill, contracts = binding contracts GP/kill\n')
+              f.write('// onTask = on-task GP/kill, offTask = off-task GP/kill, binding = binding contracts GP/kill, tetra = tetra contracts GP/kill\n')
               f.write('const GP_PER_KILL = {\n')
               for name, data in sorted(results.items()):
-                  f.write(f'  "{name}": {{ onTask: {data["onTask"]}, offTask: {data["offTask"]}, contracts: {data["contracts"]} }},\n')
+                  f.write(f'  "{name}": {{ onTask: {data["onTask"]}, offTask: {data["offTask"]}, binding: {data["binding"]}, tetra: {data["tetra"]} }},\n')
               f.write('};\n')
 
           print(f"Updated {len(results)} creatures at {now}")

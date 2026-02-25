@@ -262,6 +262,8 @@ const PERSUADE_TASKS = ["aquanites", "muspahs", "nihils", "glacors", "tormented_
 
 // Changelog data
 const CHANGELOG = [
+  { date: "25/02/2026", version: "2.2.4", note: "Tetra Contracts toggle now functional: adds Tetra GP/kill bonus when both Binding and Tetra are enabled. Binding/Tetra values now read separately from spreadsheet Columns K and N. Tetra requires Binding to be active.", change: "Tetra Contracts + GP data fix" },
+  { date: "25/02/2026", version: "2.2.3", note: "120 Slayer cape perk now active: 20% chance to choose best task per metric. Weighted averages reflect the perk when toggled on. Added Prefer/Block export button. Refactored weighted average calculation.", change: "120 Slayer perk + Prefer/Block export" },
   { date: "25/02/2026", version: "2.2.2", note: "Added Senntisten area (8 items) to Ultimate Slayer. Replaced all item images with inventory icons from the Slayer collection log. Added Spectral Lens and Greater Sonic Wave Ability Codex.", change: "Senntisten area + collection log icons" },
   { date: "25/02/2026", version: "2.2.1", note: "Added Demons, Dragons, Undead, and Strykewyrms cluster tasks to Prefer/Block list. Split Lava/Ice Strykewyrms into separate tasks. Clusters can now be preferred/blocked independently.", change: "Cluster tasks in Prefer/Block" },
   { date: "25/02/2026", version: "2.2", note: "New Ultimate Slayer drop tracker tab with 13 areas, 244 items, item images, obtained/unobtained toggle, expandable drop details. Added Slayer Introspection min/max per-task toggle. Fixed private RuneMetrics assuming all quests completed.", change: "Ultimate Slayer tab + Introspection" },

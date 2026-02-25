@@ -252,6 +252,16 @@ body {
   font-weight: 600;
 }
 
+.boost-item.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: auto;
+}
+.boost-item.disabled:hover {
+  border-color: var(--border);
+  background: var(--bg-card);
+}
+
 /* Misc boost input */
 .misc-input-wrap {
   display: flex;
