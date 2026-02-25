@@ -68,47 +68,6 @@
     }
   }
 
-  // ── Fuzzy Image Matching (tolerance-based for -f images) ───────────
-  function fuzzyImageFound(name, tolerance) {
-    if (!refs[name] || !screen) return false;
-    tolerance = tolerance || 30;
-
-    var needle = refs[name];
-    var nd = needle.data;
-    var nw = needle.width, nh = needle.height;
-    if (!nd || !nw || !nh) return false;
-
-    // Get screen pixel data
-    var screenData, sd, sw, sh;
-    try {
-      screenData = (typeof screen.toData === 'function') ? screen.toData() : screen;
-      sd = screenData.data;
-      sw = screenData.width;
-      sh = screenData.height;
-    } catch (e) { return false; }
-    if (!sd || !sw || !sh) return false;
-
-    // Search screen for needle with pixel tolerance (early termination)
-    for (var sy = 0; sy <= sh - nh; sy++) {
-      for (var sx = 0; sx <= sw - nw; sx++) {
-        var match = true;
-        for (var ny = 0; ny < nh && match; ny++) {
-          for (var nx = 0; nx < nw && match; nx++) {
-            var si = ((sy + ny) * sw + (sx + nx)) * 4;
-            var ni = (ny * nw + nx) * 4;
-            if (Math.abs(sd[si] - nd[ni]) > tolerance ||
-                Math.abs(sd[si + 1] - nd[ni + 1]) > tolerance ||
-                Math.abs(sd[si + 2] - nd[ni + 2]) > tolerance) {
-              match = false;
-            }
-          }
-        }
-        if (match) return true;
-      }
-    }
-    return false;
-  }
-
   // ── Screen Capture (same as vorkath) ────────────────────────────────
   function captureScreen() {
     try {
@@ -122,10 +81,6 @@
   // ── Build item slug for -n image key ────────────────────────────────
   function itemSlug(itemName) {
     return itemName.replace(/\s+/g, '_') + '-n';
-  }
-
-  function itemSlugPositive(itemName) {
-    return itemName.replace(/\s+/g, '_');
   }
 
   function itemSlugFound(itemName) {
@@ -174,12 +129,10 @@
         var slug = itemSlug(drop.item);
         promises.push(loadRef(slug, 'images/ultimate/' + slug + '.png'));
 
-        // For REVERSE_DETECT items: load -f and positive images
+        // For REVERSE_DETECT items: load -f (found) images
         if (REVERSE_DETECT[drop.item]) {
           var fSlug = itemSlugFound(drop.item);
           promises.push(loadRef(fSlug, 'images/ultimate/' + fSlug + '.png'));
-          var posSlug = itemSlugPositive(drop.item);
-          promises.push(loadRef(posSlug, 'images/ultimate/' + posSlug + '.png'));
         }
       });
     });
@@ -214,25 +167,13 @@
         var slug = itemSlug(drop.item);
 
         if (REVERSE_DETECT[drop.item]) {
-          // Check -f (found) image — exact match first, fuzzy fallback
+          // Only check -f (found) image — if found, mark obtained
           var fSlug = itemSlugFound(drop.item);
-          if (refs[fSlug]) {
-            if (imageFound(fSlug) || fuzzyImageFound(fSlug, 30)) {
-              changes[drop.item] = true;
-              hasChanges = true;
-              return;
-            }
+          if (refs[fSlug] && imageFound(fSlug)) {
+            changes[drop.item] = true;
+            hasChanges = true;
           }
-          // Check positive image — exact match first, fuzzy fallback
-          var posSlug = itemSlugPositive(drop.item);
-          if (refs[posSlug]) {
-            if (imageFound(posSlug) || fuzzyImageFound(posSlug, 30)) {
-              changes[drop.item] = true;
-              hasChanges = true;
-              return;
-            }
-          }
-          // Neither matched — leave state unchanged
+          // Not found — leave state unchanged (manual toggle)
         } else {
           // Normal detection: look for the -n (empty slot) image
           if (!refs[slug]) return;
