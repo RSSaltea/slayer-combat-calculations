@@ -315,6 +315,18 @@ var ULTIMATE_AREAS = [
     ]
   },
   {
+    id: "senntisten",
+    name: "Senntisten",
+    title: "Slayer of Senntisten",
+    drops: [
+      { item: "Dwarf Multicannon Upgrade Kit",  monster: "Nodon Dragonkin",            rate: "1/2000",   onTask: true },
+      { item: "Kinetic Cyclone Upgrade Kit",     monster: "Nodon Dragonkin",            rate: "1/2000",   onTask: true },
+      { item: "Oldak Coil Upgrade Kit",          monster: "Nodon Dragonkin",            rate: "1/2000",   onTask: true },
+      { item: "Abyssal Scourge",                 monster: "Abyssal Lord",               rate: "1/1280",   onTask: true },
+      { item: "Jaws of the Abyss",              monster: "Abyssal Lord",               rate: "1/1280",   onTask: true },
+    ]
+  },
+  {
     id: "general",
     name: "General",
     title: "General Drops",
