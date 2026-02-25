@@ -83,6 +83,17 @@
     return itemName.replace(/\s+/g, '_') + '-n';
   }
 
+  function itemSlugPositive(itemName) {
+    return itemName.replace(/\s+/g, '_');
+  }
+
+  // Items where -n detection is unreliable — detect the actual item image instead
+  var REVERSE_DETECT = {
+    'Steadfast Boots': true,
+    'Glaiven Boots': true,
+    'Ragefire Boots': true
+  };
+
   // ── Initialize: load all area + item images ─────────────────────────
   function init(options) {
     if (options && options.onUpdate) {
@@ -112,12 +123,18 @@
       }
     });
 
-    // Load -n item images for all drops
+    // Load -n item images for all drops (+ positive images for reverse-detect items)
     ULTIMATE_AREAS.forEach(function (area) {
       area.drops.forEach(function (drop) {
         var slug = itemSlug(drop.item);
         var path = 'images/ultimate/' + slug + '.png';
         promises.push(loadRef(slug, path));
+
+        if (REVERSE_DETECT[drop.item]) {
+          var posSlug = itemSlugPositive(drop.item);
+          var posPath = 'images/ultimate/' + posSlug + '.png';
+          promises.push(loadRef(posSlug, posPath));
+        }
       });
     });
 
@@ -146,17 +163,32 @@
       // Check if this area's identifier is visible on screen
       if (!imageFound('area_' + area.id)) return;
 
-      // Area is visible — check each item's -n (empty slot) image
+      // Area is visible — check each item
       area.drops.forEach(function (drop) {
-        var slug = itemSlug(drop.item);
-        if (!refs[slug]) return; // No -n image available, skip
+        if (REVERSE_DETECT[drop.item]) {
+          // Reverse detection: look for the actual item image
+          var posSlug = itemSlugPositive(drop.item);
+          if (!refs[posSlug]) return;
 
-        if (imageFound(slug)) {
-          // Empty slot found on screen — item NOT obtained
-          changes[drop.item] = false;
+          if (imageFound(posSlug)) {
+            // Item image found on screen — item IS obtained
+            changes[drop.item] = true;
+          } else {
+            // Item image NOT found — item NOT obtained
+            changes[drop.item] = false;
+          }
         } else {
-          // Empty slot NOT found — item IS obtained
-          changes[drop.item] = true;
+          // Normal detection: look for the -n (empty slot) image
+          var slug = itemSlug(drop.item);
+          if (!refs[slug]) return;
+
+          if (imageFound(slug)) {
+            // Empty slot found on screen — item NOT obtained
+            changes[drop.item] = false;
+          } else {
+            // Empty slot NOT found — item IS obtained
+            changes[drop.item] = true;
+          }
         }
         hasChanges = true;
       });
@@ -188,7 +220,7 @@
     start: start,
     stop: stop,
     isRunning: function () { return !!scanInterval; },
-    isAvailable: function () { return !!resolveLib(); }
+    isAvailable: function () { return typeof alt1 !== 'undefined' && !!resolveLib(); }
   };
 
 })();
