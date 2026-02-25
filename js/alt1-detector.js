@@ -55,25 +55,21 @@
       });
   }
 
-  // ── Image Matching — returns hit positions ─────────────────────────
-  function findImage(name) {
-    if (!refs[name] || !screen) return [];
+  // ── Image Matching (same as vorkath) ────────────────────────────────
+  function imageFound(name) {
+    if (!refs[name] || !screen) return false;
     try {
       var hits = typeof screen.findSubimage === 'function'
         ? screen.findSubimage(refs[name])
         : lib.findSubimage(screen, refs[name]);
-      return Array.isArray(hits) ? hits : [];
+      return Array.isArray(hits) && hits.length > 0;
     } catch (e) {
-      return [];
+      return false;
     }
   }
 
-  function imageFound(name) {
-    return findImage(name).length > 0;
-  }
-
-  // ── Fuzzy Image Matching (bounded search area) ─────────────────────
-  function fuzzyImageFound(name, tolerance, bounds) {
+  // ── Fuzzy Image Matching (tolerance-based for -f images) ───────────
+  function fuzzyImageFound(name, tolerance) {
     if (!refs[name] || !screen) return false;
     tolerance = tolerance || 30;
 
@@ -92,14 +88,9 @@
     } catch (e) { return false; }
     if (!sd || !sw || !sh) return false;
 
-    // Limit search area to bounds (collection log region)
-    var startX = bounds ? Math.max(0, bounds.x) : 0;
-    var startY = bounds ? Math.max(0, bounds.y) : 0;
-    var endX = bounds ? Math.min(bounds.x + bounds.w, sw - nw) : sw - nw;
-    var endY = bounds ? Math.min(bounds.y + bounds.h, sh - nh) : sh - nh;
-
-    for (var sy = startY; sy <= endY; sy++) {
-      for (var sx = startX; sx <= endX; sx++) {
+    // Search screen for needle with pixel tolerance (early termination)
+    for (var sy = 0; sy <= sh - nh; sy++) {
+      for (var sx = 0; sx <= sw - nw; sx++) {
         var match = true;
         for (var ny = 0; ny < nh && match; ny++) {
           for (var nx = 0; nx < nw && match; nx++) {
@@ -215,40 +206,27 @@
     var hasChanges = false;
 
     ULTIMATE_AREAS.forEach(function (area) {
-      // Check if this area's identifier is visible on screen — get position
-      var areaHits = findImage('area_' + area.id);
-      if (areaHits.length < 2) return;
-
-      // Area header found — calculate collection log grid bounds
-      // areaHits is flat [x, y, ...] — header position
-      var headerX = areaHits[0];
-      var headerY = areaHits[1];
-      // Grid is below and to the left of the header, within the log window
-      var gridBounds = {
-        x: Math.max(0, headerX - 200),
-        y: headerY,
-        w: 500,
-        h: 400
-      };
+      // Check if this area's identifier is visible on screen
+      if (!imageFound('area_' + area.id)) return;
 
       // Area is visible — check each item
       area.drops.forEach(function (drop) {
         var slug = itemSlug(drop.item);
 
         if (REVERSE_DETECT[drop.item]) {
-          // Check -f (found) image — exact first, bounded fuzzy fallback
+          // Check -f (found) image — exact match first, fuzzy fallback
           var fSlug = itemSlugFound(drop.item);
           if (refs[fSlug]) {
-            if (imageFound(fSlug) || fuzzyImageFound(fSlug, 30, gridBounds)) {
+            if (imageFound(fSlug) || fuzzyImageFound(fSlug, 30)) {
               changes[drop.item] = true;
               hasChanges = true;
               return;
             }
           }
-          // Check positive image — exact first, bounded fuzzy fallback
+          // Check positive image — exact match first, fuzzy fallback
           var posSlug = itemSlugPositive(drop.item);
           if (refs[posSlug]) {
-            if (imageFound(posSlug) || fuzzyImageFound(posSlug, 30, gridBounds)) {
+            if (imageFound(posSlug) || fuzzyImageFound(posSlug, 30)) {
               changes[drop.item] = true;
               hasChanges = true;
               return;
