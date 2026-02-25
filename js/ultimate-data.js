@@ -61,12 +61,7 @@ var ULTIMATE_AREAS = [
     title: "the Ascended",
     drops: [
       { item: "Hexcrest",                    monster: "Jungle Strykewyrm",   rate: "1/512",    onTask: true },
-      { item: "Ascension Keystone Primus",   monster: "Rorarius",            rate: "1/384" },
-      { item: "Ascension Keystone Secundus", monster: "Rorarius",            rate: "1/384" },
-      { item: "Ascension Keystone Tertius",  monster: "Rorarius",            rate: "1/384" },
-      { item: "Ascension Keystone Quartus",  monster: "Rorarius",            rate: "1/384" },
-      { item: "Ascension Keystone Quintus",  monster: "Rorarius",            rate: "1/384" },
-      { item: "Ascension Keystone Sextus",   monster: "Rorarius",            rate: "1/384" },
+      { item: "Ascension Keystone",           monster: "Rorarius",            rate: "1/384" },
       { item: "Ascension Grips",             monster: "Rorarius",            rate: "1/2056",   onTask: true },
     ]
   },
