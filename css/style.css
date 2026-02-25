@@ -1097,6 +1097,59 @@ body {
   box-shadow: 0 0 0 2px rgba(201, 170, 88, 0.15);
 }
 
+/* ── Introspection Column (hidden by default) ───────── */
+.intro-col {
+  display: none;
+  width: 55px;
+  min-width: 55px;
+  text-align: center !important;
+  cursor: default;
+}
+
+.intro-cell {
+  display: none;
+  text-align: center !important;
+  padding: 0.4rem !important;
+}
+
+.introspection-active .intro-col,
+.introspection-active .intro-cell {
+  display: table-cell;
+}
+
+.intro-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.15rem 0.45rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+
+.intro-btn.max {
+  color: var(--gold);
+  border-color: var(--gold-dim);
+  background: rgba(201, 170, 88, 0.08);
+}
+
+.intro-btn.max:hover {
+  background: rgba(201, 170, 88, 0.18);
+}
+
+.intro-btn.min {
+  color: var(--cyan);
+  border-color: var(--cyan);
+  background: rgba(80, 184, 200, 0.08);
+}
+
+.intro-btn.min:hover {
+  background: rgba(80, 184, 200, 0.18);
+}
+
 /* ── Per-Monster Scrimshaw Column ────────────────────── */
 .scrim-col {
   width: 45px;

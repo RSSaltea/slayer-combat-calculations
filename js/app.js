@@ -35,6 +35,7 @@
     customKph: {},
     scrimshawMonsters: new Set(),
     persuadeUnlocks: new Set(), // which persuade tasks the player has unlocked
+    introspectionChoices: {},   // category_id -> 'min' | 'max' (Slayer Introspection)
   };
 
   // Player data from hiscores lookup (set via callback)
@@ -63,6 +64,7 @@
         if (p.customKph) state.customKph = p.customKph;
         if (p.scrimshawMonsters) state.scrimshawMonsters = new Set(p.scrimshawMonsters);
         if (p.persuadeUnlocks) state.persuadeUnlocks = new Set(p.persuadeUnlocks);
+        if (p.introspectionChoices) state.introspectionChoices = p.introspectionChoices;
       }
     } catch (e) { /* ignore */ }
   }
@@ -86,6 +88,7 @@
         customKph: state.customKph,
         scrimshawMonsters: Array.from(state.scrimshawMonsters),
         persuadeUnlocks: Array.from(state.persuadeUnlocks),
+        introspectionChoices: state.introspectionChoices,
       }));
     } catch (e) { /* ignore */ }
   }
@@ -193,11 +196,21 @@
     var cm = getCombatMult(useScrim);
     var gm = getGpMult(useScrim);
 
-    var minsTask = kph > 0 ? (m.avgKills / kph) * 60 : 0;
+    // Determine effective kills (Slayer Introspection: min or max instead of avg)
+    var effectiveKills = m.avgKills;
+    if (state.boosts.slayerIntrospection) {
+      var taskCat = TASK_CATEGORIES.find(function (c) { return c.monsters.indexOf(m.name) !== -1; });
+      if (taskCat) {
+        var choice = state.introspectionChoices[taskCat.id] || 'max';
+        effectiveKills = choice === 'min' ? m.minTask : m.maxTask;
+      }
+    }
+
+    var minsTask = kph > 0 ? (effectiveKills / kph) * 60 : 0;
     var slayXpHr = m.baseSlayXp * kph * sm;
     var combatXpHr = m.baseCombatXp * kph * cm;
-    var slayXpTask = m.baseSlayXp * m.avgKills * sm;
-    var combatXpTask = m.baseCombatXp * m.avgKills * cm;
+    var slayXpTask = m.baseSlayXp * effectiveKills * sm;
+    var combatXpTask = m.baseCombatXp * effectiveKills * cm;
 
     var gpPerKill = 0;
     if (typeof GP_PER_KILL !== 'undefined' && gm !== 0) {
@@ -211,7 +224,7 @@
     }
 
     var gpHr = gpPerKill * kph * gm;
-    var gpTask = gpPerKill * m.avgKills * gm;
+    var gpTask = gpPerKill * effectiveKills * gm;
 
     var lockInfo = isMonsterLocked(m);
 
@@ -224,6 +237,7 @@
       minTask: m.minTask,
       maxTask: m.maxTask,
       avgKills: m.avgKills,
+      effectiveKills: effectiveKills,
       kph: kph,
       minsTask: minsTask,
       slayXpHr: slayXpHr,
@@ -443,6 +457,10 @@
     if (taskViewBtn) {
       taskViewBtn.classList.toggle('active', state.taskView);
     }
+
+    // Toggle introspection column visibility
+    var table = document.getElementById('tasks-table');
+    table.classList.toggle('introspection-active', state.boosts.slayerIntrospection);
   }
 
   // ── Individual Monster View ──────────────────────────────────────
@@ -482,7 +500,7 @@
     tbody.innerHTML = '';
 
     if (visible.length === 0 && (!state.showBlocked || blocked.length === 0)) {
-      tbody.innerHTML = '<tr><td colspan="11" class="no-results">No creatures found.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="12" class="no-results">No creatures found.</td></tr>';
       return;
     }
 
@@ -502,7 +520,7 @@
     if (state.showBlocked && blocked.length > 0) {
       var sep = document.createElement('tr');
       sep.className = 'blocked-separator';
-      sep.innerHTML = '<td colspan="11" class="blocked-label">Blocked (' + blocked.length + ')</td>';
+      sep.innerHTML = '<td colspan="12" class="blocked-label">Blocked (' + blocked.length + ')</td>';
       tbody.appendChild(sep);
 
       blocked.forEach(function (m) {
@@ -589,7 +607,7 @@
     blocked.sort(sorter);
 
     if (visible.length === 0 && (!state.showBlocked || blocked.length === 0)) {
-      tbody.innerHTML = '<tr><td colspan="11" class="no-results">No tasks found.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="12" class="no-results">No tasks found.</td></tr>';
       return;
     }
 
@@ -602,7 +620,7 @@
     if (state.showBlocked && blocked.length > 0) {
       var sep = document.createElement('tr');
       sep.className = 'blocked-separator';
-      sep.innerHTML = '<td colspan="11" class="blocked-label">Blocked (' + blocked.length + ')</td>';
+      sep.innerHTML = '<td colspan="12" class="blocked-label">Blocked (' + blocked.length + ')</td>';
       tbody.appendChild(sep);
 
       blocked.forEach(function (g) {
@@ -647,6 +665,7 @@
         subLabel +
       '</td>' +
       '<td class="' + hl('kph') + '">' + fmt(m.kph) + '</td>' +
+      '<td class="intro-cell"><button class="intro-btn ' + (state.introspectionChoices[g.cat.id] || 'max') + '" data-cat="' + g.cat.id + '">' + (state.introspectionChoices[g.cat.id] || 'max').toUpperCase() + '</button></td>' +
       '<td class="' + lockedClass + hl('slayXpHr') + '">' + fmt(m.slayXpHr) + '</td>' +
       '<td class="' + lockedClass + hl('combatXpHr') + '">' + fmt(m.combatXpHr) + '</td>' +
       '<td class="gp-col' + lockedClass + hl('gpHr') + '">' + fmt(m.gpHr) + '</td>' +
@@ -659,7 +678,7 @@
 
     if (g.monsters.length > 1) {
       tr.addEventListener('click', function (e) {
-        if (e.target.closest('.scrim-toggle') || e.target.closest('.skip-toggle')) return;
+        if (e.target.closest('.scrim-toggle') || e.target.closest('.skip-toggle') || e.target.closest('.intro-btn')) return;
         if (expanded) {
           state.expandedTasks.delete(g.cat.id);
         } else {
@@ -675,6 +694,19 @@
       skipToggle.addEventListener('click', function (e) { e.stopPropagation(); });
       skipToggle.addEventListener('change', function () {
         toggleSkip(g.cat.id);
+      });
+    }
+
+    // Introspection toggle event
+    var introBtn = tr.querySelector('.intro-btn');
+    if (introBtn) {
+      introBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var catId = introBtn.dataset.cat;
+        var current = state.introspectionChoices[catId] || 'max';
+        state.introspectionChoices[catId] = current === 'max' ? 'min' : 'max';
+        saveState();
+        updateAll();
       });
     }
 
@@ -721,6 +753,12 @@
         '<span class="kph-value">' + fmt(m.kph) + '</span>' +
         (m._customKph ? '<span class="kph-reset" title="Reset to default">&#x21ba;</span>' : '') +
       '</td>' +
+      (function () {
+        var catId = getCategoryForMonster(m.name);
+        if (!catId) return '<td class="intro-cell"></td>';
+        var choice = state.introspectionChoices[catId] || 'max';
+        return '<td class="intro-cell"><button class="intro-btn ' + choice + '" data-cat="' + catId + '">' + choice.toUpperCase() + '</button></td>';
+      })() +
       '<td class="' + lockedClass + hl('slayXpHr') + '">' + fmt(m.slayXpHr) + '</td>' +
       '<td class="' + lockedClass + hl('combatXpHr') + '">' + fmt(m.combatXpHr) + '</td>' +
       '<td class="gp-col' + lockedClass + hl('gpHr') + '">' + fmt(m.gpHr) + '</td>' +
@@ -802,6 +840,18 @@
       skipToggle.addEventListener('change', function () {
         var catId = skipToggle.dataset.cat;
         if (catId) toggleSkip(catId);
+      });
+    }
+
+    var introBtn = tr.querySelector('.intro-btn');
+    if (introBtn) {
+      introBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var catId = introBtn.dataset.cat;
+        var current = state.introspectionChoices[catId] || 'max';
+        state.introspectionChoices[catId] = current === 'max' ? 'min' : 'max';
+        saveState();
+        updateAll();
       });
     }
   }
