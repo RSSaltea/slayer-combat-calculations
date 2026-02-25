@@ -1536,6 +1536,258 @@
     renderUltimateItems();
   }
 
+  // ── Ultimate Export ───────────────────────────────────────────────
+  function initUltimateExport() {
+    var btn = document.getElementById('ultimate-export-btn');
+    var menu = document.getElementById('ultimate-export-menu');
+    if (!btn || !menu) return;
+
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      menu.classList.toggle('open');
+    });
+
+    document.addEventListener('click', function () {
+      menu.classList.remove('open');
+    });
+
+    menu.addEventListener('click', function (e) {
+      var opt = e.target.closest('.ultimate-export-option');
+      if (!opt) return;
+      menu.classList.remove('open');
+      var mode = opt.dataset.mode;
+      exportUltimateImage(mode === 'all' ? 'all' : 'area');
+    });
+  }
+
+  function loadImageAsync(src) {
+    return new Promise(function (resolve) {
+      var img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = function () { resolve(img); };
+      img.onerror = function () { resolve(null); };
+      img.src = src;
+    });
+  }
+
+  function exportUltimateImage(mode) {
+    var areas = mode === 'all' ? ULTIMATE_AREAS : [ULTIMATE_AREAS.find(function (a) { return a.id === state.ultimateActiveArea; })];
+    if (!areas[0]) return;
+
+    // Collect all image paths to preload
+    var imgPaths = {};
+    areas.forEach(function (area) {
+      area.drops.forEach(function (d) {
+        imgPaths[d.item] = getUltimateImagePath(d.item);
+      });
+    });
+
+    // Preload all images then render
+    var keys = Object.keys(imgPaths);
+    var promises = keys.map(function (k) { return loadImageAsync(imgPaths[k]); });
+
+    Promise.all(promises).then(function (images) {
+      var imgMap = {};
+      keys.forEach(function (k, i) { imgMap[k] = images[i]; });
+      drawUltimateCanvas(areas, imgMap, mode);
+    });
+  }
+
+  function drawUltimateCanvas(areas, imgMap, mode) {
+    // Layout constants
+    var COLS = 3;
+    var W = 900;
+    var PAD = 24;
+    var ICON = 22;
+    var ROW_H = 32;
+    var COL_W = Math.floor((W - PAD * 2) / COLS);
+    var AREA_GAP = 18;
+
+    // Colors
+    var BG = '#0a0c10';
+    var BG_CARD = '#181c26';
+    var GOLD = '#c9aa58';
+    var GREEN = '#4caf50';
+    var GREEN_DIM = '#2d6b30';
+    var TEXT = '#e8e6e3';
+    var TEXT_SEC = '#9ca3b0';
+    var TEXT_MUTED = '#5a6270';
+
+    // Calculate total height
+    var totalH = PAD; // top padding
+    // Title header
+    totalH += 40;
+    // Overall progress (only for export all)
+    if (mode === 'all') totalH += 30;
+
+    areas.forEach(function (area) {
+      totalH += 36; // area header
+      totalH += 24; // progress bar
+      var rows = Math.ceil(area.drops.length / COLS);
+      totalH += rows * ROW_H + 6;
+      totalH += AREA_GAP;
+    });
+    totalH += 24; // footer
+    totalH += PAD; // bottom padding
+
+    var canvas = document.createElement('canvas');
+    canvas.width = W;
+    canvas.height = totalH;
+    var ctx = canvas.getContext('2d');
+
+    // Background
+    ctx.fillStyle = BG;
+    ctx.fillRect(0, 0, W, totalH);
+
+    var y = PAD;
+
+    // Main title
+    ctx.font = '600 20px Cinzel, serif';
+    ctx.fillStyle = GOLD;
+    ctx.textBaseline = 'middle';
+    ctx.fillText('Ultimate Slayer', PAD, y + 16);
+
+    if (mode === 'all') {
+      var totalObt = countTotalObtained();
+      var totalAll = countTotalItems();
+      ctx.font = '500 13px Inter, sans-serif';
+      ctx.fillStyle = TEXT_SEC;
+      ctx.textAlign = 'right';
+      ctx.fillText(totalObt + ' / ' + totalAll + ' items obtained', W - PAD, y + 16);
+      ctx.textAlign = 'left';
+    }
+    y += 40;
+
+    // Overall progress bar (export all)
+    if (mode === 'all') {
+      var overallPct = countTotalItems() > 0 ? countTotalObtained() / countTotalItems() : 0;
+      // Track
+      ctx.fillStyle = '#0f1219';
+      roundRect(ctx, PAD, y, W - PAD * 2, 8, 4);
+      ctx.fill();
+      // Fill
+      if (overallPct > 0) {
+        ctx.fillStyle = GOLD;
+        roundRect(ctx, PAD, y, (W - PAD * 2) * overallPct, 8, 4);
+        ctx.fill();
+      }
+      y += 30;
+    }
+
+    // Each area
+    areas.forEach(function (area) {
+      var obtained = countObtainedInArea(area);
+      var total = area.drops.length;
+      var pct = total > 0 ? obtained / total : 0;
+
+      // Area name + title
+      ctx.font = '600 15px Cinzel, serif';
+      ctx.fillStyle = GOLD;
+      ctx.textBaseline = 'middle';
+      ctx.fillText(area.name, PAD, y + 11);
+
+      ctx.font = 'italic 12px Cinzel, serif';
+      ctx.fillStyle = TEXT_MUTED;
+      ctx.textAlign = 'right';
+      ctx.fillText(area.title + '  ' + obtained + '/' + total, W - PAD, y + 11);
+      ctx.textAlign = 'left';
+      y += 28;
+
+      // Progress bar
+      ctx.fillStyle = '#0f1219';
+      roundRect(ctx, PAD, y, W - PAD * 2, 6, 3);
+      ctx.fill();
+      if (pct > 0) {
+        ctx.fillStyle = pct >= 1 ? GREEN : GOLD;
+        roundRect(ctx, PAD, y, (W - PAD * 2) * pct, 6, 3);
+        ctx.fill();
+      }
+      y += 18;
+
+      // Items grid
+      area.drops.forEach(function (drop, idx) {
+        var col = idx % COLS;
+        var row = Math.floor(idx / COLS);
+        var x = PAD + col * COL_W;
+        var iy = y + row * ROW_H;
+
+        var isObtained = !!state.ultimateObtained[drop.item];
+
+        // Row background
+        ctx.fillStyle = BG_CARD;
+        roundRect(ctx, x + 1, iy + 1, COL_W - 6, ROW_H - 4, 4);
+        ctx.fill();
+
+        // Left border accent for obtained
+        if (isObtained) {
+          ctx.fillStyle = GREEN_DIM;
+          ctx.fillRect(x + 1, iy + 3, 2, ROW_H - 8);
+        }
+
+        // Icon
+        var img = imgMap[drop.item];
+        if (img) {
+          try { ctx.drawImage(img, x + 8, iy + (ROW_H - ICON) / 2, ICON, ICON); } catch (e) {}
+        }
+
+        // Checkmark or dash
+        var checkX = x + COL_W - 26;
+        if (isObtained) {
+          ctx.font = '700 13px Inter, sans-serif';
+          ctx.fillStyle = GREEN;
+          ctx.fillText('\u2713', checkX, iy + ROW_H / 2 + 1);
+        } else {
+          ctx.font = '400 13px Inter, sans-serif';
+          ctx.fillStyle = TEXT_MUTED;
+          ctx.fillText('\u2013', checkX, iy + ROW_H / 2 + 1);
+        }
+
+        // Item name
+        ctx.font = '400 11px Inter, sans-serif';
+        ctx.fillStyle = isObtained ? GREEN : TEXT;
+        var maxNameW = COL_W - 62;
+        var name = drop.item;
+        // Truncate if needed
+        while (ctx.measureText(name).width > maxNameW && name.length > 3) {
+          name = name.slice(0, -1);
+        }
+        if (name !== drop.item) name += '\u2026';
+        ctx.fillText(name, x + 34, iy + ROW_H / 2 + 1);
+      });
+
+      var rows = Math.ceil(area.drops.length / COLS);
+      y += rows * ROW_H + 6 + AREA_GAP;
+    });
+
+    // Footer
+    ctx.font = '400 10px Inter, sans-serif';
+    ctx.fillStyle = TEXT_MUTED;
+    ctx.textAlign = 'center';
+    ctx.fillText('Slayer & Combat Calculations v2.2', W / 2, totalH - PAD + 4);
+    ctx.textAlign = 'left';
+
+    // Download
+    var link = document.createElement('a');
+    link.download = mode === 'all' ? 'ultimate-slayer-all.png' : 'ultimate-slayer-' + state.ultimateActiveArea + '.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  }
+
+  function roundRect(ctx, x, y, w, h, r) {
+    if (w < 0) w = 0;
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  }
+
   // ── Update All ─────────────────────────────────────────────────────
   function updateAll() {
     updateMultiplierBar();
@@ -1564,6 +1816,7 @@
     updateAll();
     renderChangelog();
     renderUltimateTab();
+    initUltimateExport();
     if (typeof initPlayerLookup === 'function') initPlayerLookup();
     if (typeof initGoalsTab === 'function') initGoalsTab();
   }

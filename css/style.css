@@ -1602,14 +1602,80 @@ body {
   color: var(--gold-dim);
 }
 
-/* Area title */
+/* Area title row */
+.ultimate-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
 .ultimate-area-title {
   font-family: 'Cinzel', serif;
   font-size: 1rem;
   color: var(--gold);
-  margin-bottom: 1rem;
   font-style: italic;
   letter-spacing: 0.03em;
+}
+
+/* Export button & dropdown */
+.ultimate-export-wrap {
+  position: relative;
+}
+
+.ultimate-export-btn {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.4rem 0.85rem;
+  font-size: 0.78rem;
+  font-family: inherit;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ultimate-export-btn:hover {
+  border-color: var(--gold-dim);
+  color: var(--gold);
+}
+
+.ultimate-export-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  z-index: 50;
+  overflow: hidden;
+  min-width: 130px;
+}
+
+.ultimate-export-menu.open {
+  display: block;
+}
+
+.ultimate-export-option {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0.55rem 0.85rem;
+  font-size: 0.78rem;
+  font-family: inherit;
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s;
+}
+
+.ultimate-export-option:hover {
+  background: var(--bg-card-hover);
+  color: var(--gold);
 }
 
 /* Item grid */
