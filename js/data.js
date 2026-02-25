@@ -257,6 +257,7 @@ const PERSUADE_TASKS = ["aquanites", "muspahs", "nihils", "glacors", "tormented_
 
 // Changelog data
 const CHANGELOG = [
+  { date: "25/02/2026", version: "2.2", note: "New Ultimate Slayer drop tracker tab with 13 areas, 244 items, item images, obtained/unobtained toggle, expandable drop details. Added Slayer Introspection min/max per-task toggle. Fixed private RuneMetrics assuming all quests completed.", change: "Ultimate Slayer tab + Introspection" },
   { date: "25/02/2026", version: "2.1", note: "Added minTask data, fixed scrim/KPH propagation to Prefer/Block, moved Skip to Slayer Tasks tab, added lock checks to Prefer/Block, added missing quest requirements.", change: "Major Prefer/Block overhaul" },
   { date: "24/02/2026", version: "2.0", note: "Major rewrite: base data, editable KPH, merged tabs, per-monster scrimshaw, prefer/block auto-fill.", change: "Restructured to GitHub Pages site" },
   { date: "01/09/2025", version: "1.3.5", note: "KPHs given by Joshua B", change: "Updated KPH of all monsters" },
