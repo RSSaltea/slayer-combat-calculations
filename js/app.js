@@ -2076,13 +2076,23 @@
     ctx.closePath();
   }
 
-  // ── Alt1 Check Button ──────────────────────────────────────────────
+  // ── Alt1 Install / Check Buttons ───────────────────────────────────
   function initAlt1Check() {
-    var btn = document.getElementById('ultimate-check-btn');
-    if (!btn) return;
+    var checkBtn = document.getElementById('ultimate-check-btn');
+    var installBtn = document.getElementById('alt1-install-btn');
 
-    // Only show if UltimateDetector is available (A1lib loaded inside Alt1)
-    if (typeof UltimateDetector === 'undefined' || !UltimateDetector.isAvailable()) return;
+    var insideAlt1 = typeof UltimateDetector !== 'undefined' && UltimateDetector.isAvailable();
+
+    // Show install button in browser, hide in Alt1
+    if (installBtn) {
+      installBtn.style.display = insideAlt1 ? 'none' : '';
+    }
+
+    if (!checkBtn) return;
+
+    // Only show Check if inside Alt1
+    if (!insideAlt1) return;
+    var btn = checkBtn;
 
     btn.style.display = '';
 

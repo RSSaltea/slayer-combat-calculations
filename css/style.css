@@ -1672,6 +1672,27 @@ body {
   letter-spacing: 0.03em;
 }
 
+/* Alt1 Install button (browser view) */
+.alt1-install-btn {
+  background: linear-gradient(180deg, #c98736 0%, #a06b28 100%);
+  border: 1px solid #c9873644;
+  border-radius: var(--radius);
+  padding: 0.4rem 0.85rem;
+  font-size: 0.78rem;
+  font-family: inherit;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-right: 0.5rem;
+  text-decoration: none;
+}
+
+.alt1-install-btn:hover {
+  background: linear-gradient(180deg, #daa04a 0%, #b87e34 100%);
+  color: #fff;
+}
+
 /* Alt1 Check button */
 .ultimate-check-btn {
   background: var(--bg-card);
