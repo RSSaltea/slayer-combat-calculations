@@ -127,17 +127,16 @@
       }
     });
 
-    // Load -n, -f, and positive item images for all drops
+    // Load -n item images for all drops
     ULTIMATE_AREAS.forEach(function (area) {
       area.drops.forEach(function (drop) {
         var slug = itemSlug(drop.item);
         promises.push(loadRef(slug, 'images/ultimate/' + slug + '.png'));
 
-        // -f (found/obtained) image — used as extra positive detection
-        var fSlug = itemSlugFound(drop.item);
-        promises.push(loadRef(fSlug, 'images/ultimate/' + fSlug + '.png'));
-
+        // For REVERSE_DETECT items: load -f and positive images
         if (REVERSE_DETECT[drop.item]) {
+          var fSlug = itemSlugFound(drop.item);
+          promises.push(loadRef(fSlug, 'images/ultimate/' + fSlug + '.png'));
           var posSlug = itemSlugPositive(drop.item);
           promises.push(loadRef(posSlug, 'images/ultimate/' + posSlug + '.png'));
         }
@@ -172,23 +171,23 @@
       // Area is visible — check each item
       area.drops.forEach(function (drop) {
         var slug = itemSlug(drop.item);
-        var fSlug = itemSlugFound(drop.item);
-
-        // Check -f (found) image first — if present and matched, item IS obtained
-        if (refs[fSlug] && imageFound(fSlug)) {
-          changes[drop.item] = true;
-          hasChanges = true;
-          return;
-        }
 
         if (REVERSE_DETECT[drop.item]) {
-          // -n images are identical for these items so only use positive detection
+          // Check -f (found) image — obtained item screenshot
+          var fSlug = itemSlugFound(drop.item);
+          if (refs[fSlug] && imageFound(fSlug)) {
+            changes[drop.item] = true;
+            hasChanges = true;
+            return;
+          }
+          // Check positive image
           var posSlug = itemSlugPositive(drop.item);
           if (refs[posSlug] && imageFound(posSlug)) {
             changes[drop.item] = true;
             hasChanges = true;
+            return;
           }
-          // Not found — leave state unchanged (manual toggle)
+          // Neither matched — leave state unchanged
         } else {
           // Normal detection: look for the -n (empty slot) image
           if (!refs[slug]) return;
