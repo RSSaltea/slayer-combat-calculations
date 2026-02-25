@@ -266,6 +266,7 @@ var ULTIMATE_AREAS = [
       { item: "Ragefire Gland",               monster: "Rune Dragon",                  rate: "1/768" },
       { item: "Kethsi Ring (5)",              monster: "Rune Dragon",                  rate: "1/1024" },
       { item: "Kethsi Outfit Scroll",         monster: "Rune Dragon (Elite)",          rate: "" },
+      { item: "Tuska's Wrath Ability Codex",  monster: "Airut",                        rate: "1/400",    onTask: true },
     ]
   },
   {
