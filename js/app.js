@@ -7,7 +7,6 @@
     boosts: {
       codexPct: 5,
       avatarPct: 6,
-      raf: false,
       slayerBxp: false,
       combatBxp: false,
       offTask: false,
@@ -99,7 +98,6 @@
     var m = 1;
     if (state.boosts.codexPct > 0) m += state.boosts.codexPct / 100;
     if (state.boosts.avatarPct > 0) m += state.boosts.avatarPct / 100;
-    if (state.boosts.raf) m += 0.10;
     if (state.boosts.slayerBxp) m += 1.0;
     if (useScrimshaw !== undefined ? useScrimshaw : state.boosts.scrimshaw) m += 0.50;
     if (state.boosts.doubleXp) m += 1.0;
@@ -110,7 +108,6 @@
   function getCombatMult(useScrimshaw) {
     var m = 1;
     if (state.boosts.avatarPct > 0) m += state.boosts.avatarPct / 100;
-    if (state.boosts.raf) m += 0.10;
     if (state.boosts.combatBxp) m += 1.0;
     if (useScrimshaw !== undefined ? useScrimshaw : state.boosts.scrimshaw) m += 0.50;
     if (state.boosts.doubleXp) m += 1.0;
@@ -135,6 +132,55 @@
   function isMonsterLocked(m) {
     if (typeof checkMonsterLocked !== 'function') return { locked: false, reasons: [] };
     return checkMonsterLocked(m.name, _playerSkills, _playerQuests, state.persuadeUnlocks);
+  }
+
+  // ── Check if a task category is eligible (not fully locked/persuade-locked) ──
+  function isCategoryEligible(catId) {
+    // Check persuade lock
+    if (PERSUADE_TASKS.indexOf(catId) !== -1 && !state.persuadeUnlocks.has(catId)) return false;
+    // Check if all non-cluster monsters in this category are locked
+    var cat = TASK_CATEGORIES.find(function (c) { return c.id === catId; });
+    if (!cat) return false;
+    var hasUnlocked = false;
+    cat.monsters.forEach(function (mName) {
+      MONSTERS.filter(function (m) { return m.name === mName && !m.cluster; }).forEach(function (m) {
+        if (!isMonsterLocked(m).locked) hasUnlocked = true;
+      });
+    });
+    return hasUnlocked;
+  }
+
+  // ── Get best monster icon for a task category ────────────────────────
+  // Uses the highest slayer-level monster the player can kill, or falls back to first
+  function getBestIconForCategory(cat) {
+    var bestName = '';
+    var bestSlayLvl = -1;
+    cat.monsters.forEach(function (mName) {
+      MONSTERS.filter(function (m) { return m.name === mName && !m.cluster; }).forEach(function (m) {
+        var lockInfo = isMonsterLocked(m);
+        if (!lockInfo.locked) {
+          var req = (typeof UNLOCK_REQUIREMENTS !== 'undefined') ? UNLOCK_REQUIREMENTS[m.name] : null;
+          var lvl = (req && req.slayerLevel) ? req.slayerLevel : 0;
+          if (lvl > bestSlayLvl) {
+            bestSlayLvl = lvl;
+            bestName = m.name;
+          }
+        }
+      });
+    });
+    // Fallback: first monster if none unlocked
+    if (!bestName && cat.monsters.length > 0) bestName = cat.monsters[0];
+    return bestName;
+  }
+
+  // ── Get skip state for a monster's category ──────────────────────────
+  function getCategoryForMonster(monsterName) {
+    for (var i = 0; i < TASK_CATEGORIES.length; i++) {
+      if (TASK_CATEGORIES[i].monsters.indexOf(monsterName) !== -1) {
+        return TASK_CATEGORIES[i].id;
+      }
+    }
+    return null;
   }
 
   // ── Compute all derived values from base data ──────────────────────
@@ -175,6 +221,7 @@
       cluster: m.cluster,
       baseSlayXp: m.baseSlayXp,
       baseCombatXp: m.baseCombatXp,
+      minTask: m.minTask,
       maxTask: m.maxTask,
       avgKills: m.avgKills,
       kph: kph,
@@ -272,7 +319,6 @@
     });
 
     var boostDefs = [
-      { key: 'raf', label: 'Refer a Friend', badge: '+10%' },
       { key: 'slayerBxp', label: 'Slayer BXP', badge: '+100%' },
       { key: 'combatBxp', label: 'Combat BXP', badge: '+100%' },
       { key: 'offTask', label: 'Off Task (GP/HR)', badge: '' },
@@ -436,7 +482,7 @@
     tbody.innerHTML = '';
 
     if (visible.length === 0 && (!state.showBlocked || blocked.length === 0)) {
-      tbody.innerHTML = '<tr><td colspan="10" class="no-results">No creatures found.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="11" class="no-results">No creatures found.</td></tr>';
       return;
     }
 
@@ -456,7 +502,7 @@
     if (state.showBlocked && blocked.length > 0) {
       var sep = document.createElement('tr');
       sep.className = 'blocked-separator';
-      sep.innerHTML = '<td colspan="10" class="blocked-label">Blocked (' + blocked.length + ')</td>';
+      sep.innerHTML = '<td colspan="11" class="blocked-label">Blocked (' + blocked.length + ')</td>';
       tbody.appendChild(sep);
 
       blocked.forEach(function (m) {
@@ -543,7 +589,7 @@
     blocked.sort(sorter);
 
     if (visible.length === 0 && (!state.showBlocked || blocked.length === 0)) {
-      tbody.innerHTML = '<tr><td colspan="10" class="no-results">No tasks found.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="11" class="no-results">No tasks found.</td></tr>';
       return;
     }
 
@@ -556,7 +602,7 @@
     if (state.showBlocked && blocked.length > 0) {
       var sep = document.createElement('tr');
       sep.className = 'blocked-separator';
-      sep.innerHTML = '<td colspan="10" class="blocked-label">Blocked (' + blocked.length + ')</td>';
+      sep.innerHTML = '<td colspan="11" class="blocked-label">Blocked (' + blocked.length + ')</td>';
       tbody.appendChild(sep);
 
       blocked.forEach(function (g) {
@@ -571,11 +617,13 @@
     var hl = function (col) { return sortKey === col ? ' highlight' : ''; };
     var lockedClass = g.allLocked ? ' locked-text' : '';
     var expandIcon = g.monsters.length > 1 ? (expanded ? '\u25BC ' : '\u25B6 ') : '';
+    var isSkipped = state.skip.has(g.cat.id);
 
     var tr = document.createElement('tr');
     tr.className = 'task-group-row';
     if (isBlockedSection) tr.classList.add('blocked-row');
     if (g.allLocked) tr.classList.add('locked-row');
+    if (isSkipped) tr.classList.add('skipped-row');
     if (g.isPreferred && !g.allLocked) tr.style.borderLeft = '3px solid var(--green)';
     if (g.monsters.length > 1) tr.style.cursor = 'pointer';
 
@@ -584,9 +632,14 @@
     monsterNames.forEach(function (n) { if (uniqueNames.indexOf(n) === -1) uniqueNames.push(n); });
     var subLabel = g.monsters.length > 1 ? '<span class="task-monsters-list">' + uniqueNames.join(', ') + '</span>' : '';
 
+    // Get best icon for this task category
+    var iconName = getBestIconForCategory(g.cat);
+    var icon = monsterIcon(iconName);
+
     tr.innerHTML =
       '<td class="' + lockedClass + '">' +
         (rank !== '' ? '<span class="row-rank">' + rank + '</span>' : '') +
+        icon +
         '<span class="expand-icon">' + expandIcon + '</span>' +
         '<span class="creature-name">' + g.cat.label + '</span>' +
         (g.isPreferred && !g.allLocked ? ' <span class="prefer-tag">PREFER</span>' : '') +
@@ -601,17 +654,27 @@
       '<td class="' + lockedClass + hl('slayXpTask') + '">' + fmt(m.slayXpTask) + '</td>' +
       '<td class="' + lockedClass + hl('combatXpTask') + '">' + fmt(m.combatXpTask) + '</td>' +
       '<td class="' + lockedClass + hl('minsTask') + '">' + m.minsTask.toFixed(1) + '</td>' +
-      '<td class="scrim-cell"></td>';
+      '<td class="scrim-cell"></td>' +
+      '<td class="skip-cell"><input type="checkbox" class="skip-toggle" data-cat="' + g.cat.id + '"' + (isSkipped ? ' checked' : '') + '></td>';
 
     if (g.monsters.length > 1) {
       tr.addEventListener('click', function (e) {
-        if (e.target.closest('.scrim-toggle')) return;
+        if (e.target.closest('.scrim-toggle') || e.target.closest('.skip-toggle')) return;
         if (expanded) {
           state.expandedTasks.delete(g.cat.id);
         } else {
           state.expandedTasks.add(g.cat.id);
         }
         renderTasksTable();
+      });
+    }
+
+    // Skip toggle event
+    var skipToggle = tr.querySelector('.skip-toggle');
+    if (skipToggle) {
+      skipToggle.addEventListener('click', function (e) { e.stopPropagation(); });
+      skipToggle.addEventListener('change', function () {
+        toggleSkip(g.cat.id);
       });
     }
 
@@ -665,7 +728,13 @@
       '<td class="' + lockedClass + hl('slayXpTask') + '">' + fmt(m.slayXpTask) + '</td>' +
       '<td class="' + lockedClass + hl('combatXpTask') + '">' + fmt(m.combatXpTask) + '</td>' +
       '<td class="' + lockedClass + hl('minsTask') + '">' + m.minsTask.toFixed(1) + '</td>' +
-      '<td class="scrim-cell"><input type="checkbox" class="scrim-toggle" data-key="' + m._key + '"' + scrimChecked + '></td>'
+      '<td class="scrim-cell"><input type="checkbox" class="scrim-toggle" data-key="' + m._key + '"' + scrimChecked + '></td>' +
+      (function () {
+        if (m.cluster) return '<td class="skip-cell"></td>';
+        var catId = getCategoryForMonster(m.name);
+        var skipChecked = catId && state.skip.has(catId) ? ' checked' : '';
+        return '<td class="skip-cell"><input type="checkbox" class="skip-toggle" data-cat="' + (catId || '') + '"' + skipChecked + '></td>';
+      })()
     );
   }
 
@@ -676,8 +745,7 @@
         if (e.target.classList.contains('kph-reset')) {
           delete state.customKph[m._key];
           saveState();
-          renderTasksTable();
-          updateStatsBar();
+          updateAll();
           return;
         }
         if (kphCell.querySelector('input[type="number"]')) return;
@@ -704,8 +772,7 @@
             delete state.customKph[m._key];
           }
           saveState();
-          renderTasksTable();
-          updateStatsBar();
+          updateAll();
         };
         input.addEventListener('blur', finish);
         input.addEventListener('keydown', function (e) {
@@ -725,8 +792,16 @@
           state.scrimshawMonsters.delete(m._key);
         }
         saveState();
-        renderTasksTable();
-        updateStatsBar();
+        updateAll();
+      });
+    }
+
+    var skipToggle = tr.querySelector('.skip-toggle');
+    if (skipToggle) {
+      skipToggle.addEventListener('click', function (e) { e.stopPropagation(); });
+      skipToggle.addEventListener('change', function () {
+        var catId = skipToggle.dataset.cat;
+        if (catId) toggleSkip(catId);
       });
     }
   }
@@ -829,7 +904,7 @@
       var newPrefer = new Set(state.pinnedPrefer);
       for (var i = 0; i < preferScored.length && newPrefer.size < MAX_PREFER; i++) {
         var id = preferScored[i].id;
-        if (!newPrefer.has(id) && !state.block.has(id) && !state.skip.has(id) && preferScored[i].score > 0) {
+        if (!newPrefer.has(id) && !state.block.has(id) && !state.skip.has(id) && preferScored[i].score > 0 && isCategoryEligible(id)) {
           newPrefer.add(id);
         }
       }
@@ -846,7 +921,7 @@
       var newBlock = new Set(state.pinnedBlock);
       for (var j = 0; j < blockScored.length && newBlock.size < MAX_BLOCK; j++) {
         var bid = blockScored[j].id;
-        if (!newBlock.has(bid) && !state.prefer.has(bid) && !state.skip.has(bid)) {
+        if (!newBlock.has(bid) && !state.prefer.has(bid) && !state.skip.has(bid) && isCategoryEligible(bid)) {
           newBlock.add(bid);
         }
       }
@@ -984,18 +1059,22 @@
         if (searchQ && cat.label.toLowerCase().indexOf(searchQ) === -1) return;
 
         var isSkipped = state.skip.has(cat.id);
+        var isLocked = !isCategoryEligible(cat.id);
         chip = document.createElement('div');
-        chip.className = 'task-chip' + (isSkipped ? ' skipped' : '');
+        chip.className = 'task-chip' + (isSkipped ? ' skipped' : '') + (isLocked ? ' locked-chip' : '');
         chip.innerHTML =
-          '<span>' + cat.label + statLabel + '</span>' +
+          '<span>' + cat.label + statLabel +
+            (isSkipped ? ' <span class="skip-tag">SKIP</span>' : '') +
+            (isLocked ? ' <span class="locked-tag">LOCKED</span>' : '') +
+          '</span>' +
           '<div class="chip-actions">' +
-            '<button class="chip-btn prefer-btn" title="Prefer (pin)">+</button>' +
+            '<button class="chip-btn prefer-btn" title="Prefer (pin)"' + (isLocked ? ' disabled' : '') + '>+</button>' +
             '<button class="chip-btn block-btn" title="Block (pin)">&minus;</button>' +
-            '<button class="chip-btn skip-btn' + (isSkipped ? ' active' : '') + '" title="Always skip with Slayer points (excluded from averages)">Skip</button>' +
           '</div>';
-        chip.querySelector('.prefer-btn').addEventListener('click', function (e) { e.stopPropagation(); pinPrefer(cat.id); });
+        if (!isLocked) {
+          chip.querySelector('.prefer-btn').addEventListener('click', function (e) { e.stopPropagation(); pinPrefer(cat.id); });
+        }
         chip.querySelector('.block-btn').addEventListener('click', function (e) { e.stopPropagation(); pinBlock(cat.id); });
-        chip.querySelector('.skip-btn').addEventListener('click', function (e) { e.stopPropagation(); toggleSkip(cat.id); });
         unassignedList.appendChild(chip);
       }
     });

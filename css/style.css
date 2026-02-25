@@ -180,7 +180,7 @@ body {
 /* Toggle / Boost Section */
 .boosts-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  grid-template-columns: repeat(6, 1fr);
   gap: 0.75rem;
   margin-bottom: 2rem;
 }
@@ -679,7 +679,7 @@ body {
 /* Info Cards */
 .info-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: 1rem;
   margin-bottom: 2rem;
 }
@@ -743,7 +743,7 @@ body {
 /* Stats Summary Bar */
 .stats-bar {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 0.75rem;
   margin-bottom: 1.5rem;
 }
@@ -778,7 +778,8 @@ body {
   .main-content { padding: 1rem; }
   .tab-nav { padding: 0 0.5rem; }
   .tab-btn { padding: 0.75rem 1rem; font-size: 0.8rem; }
-  .boosts-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+  .boosts-grid { grid-template-columns: repeat(3, 1fr); }
+  .player-stats-grid { grid-template-columns: repeat(2, 1fr); }
   .pref-block-layout { grid-template-columns: 1fr; }
   .pref-block-middle { flex-direction: row; padding-top: 0; }
   .stats-bar { grid-template-columns: repeat(2, 1fr); }
@@ -788,6 +789,7 @@ body {
   html { font-size: 13px; }
   .site-header h1 { font-size: 1.3rem; }
   .boosts-grid { grid-template-columns: 1fr 1fr; }
+  .player-stats-grid { grid-template-columns: 1fr 1fr; }
   .stats-bar { grid-template-columns: 1fr 1fr; }
 }
 
@@ -877,7 +879,7 @@ body {
 
 .player-stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 0.6rem;
 }
 
@@ -1112,6 +1114,49 @@ body {
   height: 15px;
   cursor: pointer;
   accent-color: var(--gold);
+}
+
+/* ── Skip Column ─────────────────────────────────────── */
+.skip-col {
+  width: 45px;
+  min-width: 45px;
+  text-align: center !important;
+}
+
+.skip-cell {
+  text-align: center !important;
+  padding: 0.4rem !important;
+}
+
+.skip-toggle {
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+  accent-color: var(--purple);
+}
+
+.skipped-row td {
+  opacity: 0.45;
+}
+
+.skipped-row:hover td {
+  opacity: 0.6;
+}
+
+.skip-tag {
+  color: var(--purple);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  vertical-align: middle;
+  margin-left: 0.25rem;
+  padding: 0.1rem 0.3rem;
+  background: rgba(144, 96, 192, 0.12);
+  border-radius: 3px;
+}
+
+.locked-chip {
+  opacity: 0.45;
 }
 
 /* ── Prefer Tag ──────────────────────────────────────── */

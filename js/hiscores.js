@@ -216,9 +216,7 @@ var DISPLAY_SKILLS = [
   { id: 'defence', name: 'Defence' },
   { id: 'constitution', name: 'Constitution' },
   { id: 'ranged', name: 'Ranged' },
-  { id: 'prayer', name: 'Prayer' },
   { id: 'magic', name: 'Magic' },
-  { id: 'summoning', name: 'Summoning' },
   { id: 'necromancy', name: 'Necromancy' },
   { id: 'slayer', name: 'Slayer' },
 ];
