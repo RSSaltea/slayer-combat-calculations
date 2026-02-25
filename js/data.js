@@ -262,6 +262,7 @@ const PERSUADE_TASKS = ["aquanites", "muspahs", "nihils", "glacors", "tormented_
 
 // Changelog data
 const CHANGELOG = [
+  { date: "25/02/2026", version: "2.3.0", note: "Alt1 Toolkit integration: Ultimate Slayer tab now has a Check button when running inside Alt1. Continuously scans the RuneScape collection log and auto-detects obtained/unobtained items using image matching. Area detection identifies which log page is open.", change: "Alt1 image detection for Ultimate Slayer" },
   { date: "25/02/2026", version: "2.2.4", note: "Tetra Contracts toggle now functional: adds Tetra GP/kill bonus when both Binding and Tetra are enabled. Binding/Tetra values now read separately from spreadsheet Columns K and N. Tetra requires Binding to be active.", change: "Tetra Contracts + GP data fix" },
   { date: "25/02/2026", version: "2.2.3", note: "120 Slayer cape perk now active: 20% chance to choose best task per metric. Weighted averages reflect the perk when toggled on. Added Prefer/Block export button. Refactored weighted average calculation.", change: "120 Slayer perk + Prefer/Block export" },
   { date: "25/02/2026", version: "2.2.2", note: "Added Senntisten area (8 items) to Ultimate Slayer. Replaced all item images with inventory icons from the Slayer collection log. Added Spectral Lens and Greater Sonic Wave Ability Codex.", change: "Senntisten area + collection log icons" },
@@ -283,5 +284,5 @@ const CHANGELOG = [
 
 // To-Do list
 const TODO_LIST = [
-  { text: "Make Alt1 Plugin", done: false },
+  { text: "Make Alt1 Plugin", done: true },
 ];

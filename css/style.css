@@ -1672,9 +1672,43 @@ body {
   letter-spacing: 0.03em;
 }
 
+/* Alt1 Check button */
+.ultimate-check-btn {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.4rem 0.85rem;
+  font-size: 0.78rem;
+  font-family: inherit;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-right: 0.5rem;
+}
+
+.ultimate-check-btn:hover {
+  border-color: var(--green);
+  color: var(--green);
+}
+
+.ultimate-check-btn.active {
+  background: var(--green);
+  border-color: var(--green);
+  color: #fff;
+  animation: checkPulse 2s ease-in-out infinite;
+}
+
+@keyframes checkPulse {
+  0%, 100% { box-shadow: 0 0 4px rgba(76, 175, 80, 0.4); }
+  50% { box-shadow: 0 0 12px rgba(76, 175, 80, 0.8); }
+}
+
 /* Export button & dropdown */
 .ultimate-export-wrap {
   position: relative;
+  display: flex;
+  align-items: center;
 }
 
 .ultimate-export-btn {

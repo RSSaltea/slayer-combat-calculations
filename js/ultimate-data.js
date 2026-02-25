@@ -5,6 +5,7 @@ var ULTIMATE_AREAS = [
   {
     id: "asgarnia_misthalin",
     name: "Asgarnia & Misthalin",
+    areaImage: "Asgarnia & Misthalin.png",
     title: "Protector of the Peace",
     drops: [
       { item: "Goblin Mail",              monster: "Goblin",                    rate: "9/128" },
@@ -37,6 +38,7 @@ var ULTIMATE_AREAS = [
   {
     id: "daemonheim",
     name: "Daemonheim",
+    areaImage: "Daemonheim.png",
     title: "the Bloodrager",
     drops: [
       { item: "Adrenaline Urn",              monster: "Kal'gerion Demon",    rate: "1/1024" },
@@ -58,6 +60,7 @@ var ULTIMATE_AREAS = [
   {
     id: "feldip_hills",
     name: "Feldip Hills",
+    areaImage: "Feldip Hills.png",
     title: "the Ascended",
     drops: [
       { item: "Hexcrest",                    monster: "Jungle Strykewyrm",   rate: "1/512",    onTask: true },
@@ -68,6 +71,7 @@ var ULTIMATE_AREAS = [
   {
     id: "fremennik_province",
     name: "Fremennik Province",
+    areaImage: "Fremennik Province.png",
     title: "the End of All Things",
     drops: [
       { item: "Light Mystic Hat",            monster: "Basilisk",                        rate: "1/512" },
@@ -98,6 +102,7 @@ var ULTIMATE_AREAS = [
   {
     id: "kandarin",
     name: "Kandarin",
+    areaImage: "Kandarin.png",
     title: "the Well 'Ardy",
     drops: [
       { item: "Tortoise Shell",          monster: "Tortoise / Warped Tortoise", rate: "Uncommon" },
@@ -121,6 +126,7 @@ var ULTIMATE_AREAS = [
   {
     id: "karamja",
     name: "Karamja",
+    areaImage: "Karamja.png",
     title: "of the Jungle",
     drops: [
       { item: "Dragon Platelegs",        monster: "Adamant Dragon",              rate: "1/512" },
@@ -144,6 +150,7 @@ var ULTIMATE_AREAS = [
   {
     id: "keldagrim",
     name: "Keldagrim",
+    areaImage: "Keldagrim.png",
     title: "the Stout Slayer",
     drops: [
       { item: "Granite Shield",              monster: "Ice Troll",                   rate: "1/128" },
@@ -157,6 +164,7 @@ var ULTIMATE_AREAS = [
   {
     id: "kharidian_desert",
     name: "Kharidian Desert",
+    areaImage: "Kharidian Desert.png",
     title: "the Devourer",
     drops: [
       { item: "Focus Sight",                 monster: "Desert Strykewyrm",           rate: "1/512" },
@@ -177,6 +185,7 @@ var ULTIMATE_AREAS = [
   {
     id: "lost_lands",
     name: "Lost Lands",
+    areaImage: "Lost Lans and Dungeons.png",
     title: "the Harbinger of Death",
     drops: [
       { item: "Black Mask (10)",              monster: "Cave Horror",                  rate: "1/512" },
@@ -212,6 +221,7 @@ var ULTIMATE_AREAS = [
   {
     id: "morytania",
     name: "Morytania",
+    areaImage: "Morytania.png",
     title: "the Scourge of the Undead",
     drops: [
       { item: "Congealed Blood",             monster: "Bloodveld",                    rate: "6/128" },
@@ -247,6 +257,7 @@ var ULTIMATE_AREAS = [
   {
     id: "other_worlds",
     name: "Other Worlds",
+    areaImage: "Other Worlds.png",
     title: "Gielinor's Champion",
     drops: [
       { item: "Dragon Ward",                  monster: "Force Muspah",                 rate: "Uncommon" },
@@ -272,6 +283,7 @@ var ULTIMATE_AREAS = [
   {
     id: "wilderness",
     name: "Wilderness",
+    areaImage: "Wilderness.png",
     title: "Forinthry's Fury",
     drops: [
       { item: "Dragon Chainbody",             monster: "Kalphite Queen",               rate: "1/128" },
@@ -318,6 +330,7 @@ var ULTIMATE_AREAS = [
   {
     id: "senntisten",
     name: "Senntisten",
+    areaImage: "Senntisten.png",
     title: "Slayer of Senntisten",
     drops: [
       { item: "Dwarf Multicannon Upgrade Kit",  monster: "Nodon Dragonkin",            rate: "1/2000",   onTask: true },
@@ -333,6 +346,7 @@ var ULTIMATE_AREAS = [
   {
     id: "general",
     name: "General",
+    areaImage: "General Drops.png",
     title: "General Drops",
     drops: [
       { item: "Tooth Half of a Key",             monster: "Various",           rate: "Common" },

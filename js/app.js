@@ -1648,7 +1648,7 @@
     ctx.font = '400 10px Inter, sans-serif';
     ctx.fillStyle = TEXT_MUTED;
     ctx.textAlign = 'center';
-    ctx.fillText('Slayer & Combat Calculations v2.2.4', W / 2, y + 10);
+    ctx.fillText('Slayer & Combat Calculations v2.3.0', W / 2, y + 10);
     ctx.textAlign = 'left';
 
     // Download
@@ -1821,6 +1821,7 @@
     renderUltimateProgress();
     renderUltimateAreaTabs();
     renderUltimateItems();
+    updateAlt1CheckButton();
   }
 
   // ── Ultimate Export ───────────────────────────────────────────────
@@ -2050,7 +2051,7 @@
     ctx.font = '400 10px Inter, sans-serif';
     ctx.fillStyle = TEXT_MUTED;
     ctx.textAlign = 'center';
-    ctx.fillText('Slayer & Combat Calculations v2.2.4', W / 2, totalH - PAD + 4);
+    ctx.fillText('Slayer & Combat Calculations v2.3.0', W / 2, totalH - PAD + 4);
     ctx.textAlign = 'left';
 
     // Download
@@ -2073,6 +2074,64 @@
     ctx.lineTo(x, y + r);
     ctx.quadraticCurveTo(x, y, x + r, y);
     ctx.closePath();
+  }
+
+  // ── Alt1 Check Button ──────────────────────────────────────────────
+  function initAlt1Check() {
+    var btn = document.getElementById('ultimate-check-btn');
+    if (!btn) return;
+
+    // Only show if UltimateDetector is available (A1lib loaded inside Alt1)
+    if (typeof UltimateDetector === 'undefined' || !UltimateDetector.isAvailable()) return;
+
+    btn.style.display = '';
+
+    btn.addEventListener('click', function () {
+      if (UltimateDetector.isRunning()) {
+        UltimateDetector.stop();
+        btn.classList.remove('active');
+        btn.textContent = 'Check';
+      } else {
+        UltimateDetector.init({
+          onUpdate: function (changes) {
+            var changed = false;
+            Object.keys(changes).forEach(function (item) {
+              if (changes[item]) {
+                if (!state.ultimateObtained[item]) {
+                  state.ultimateObtained[item] = true;
+                  changed = true;
+                }
+              } else {
+                if (state.ultimateObtained[item]) {
+                  delete state.ultimateObtained[item];
+                  changed = true;
+                }
+              }
+            });
+            if (changed) {
+              saveState();
+              renderUltimateTab();
+            }
+          }
+        }).then(function () {
+          UltimateDetector.start();
+          btn.classList.add('active');
+          btn.textContent = 'Checking...';
+        });
+      }
+    });
+  }
+
+  function updateAlt1CheckButton() {
+    var btn = document.getElementById('ultimate-check-btn');
+    if (!btn || btn.style.display === 'none') return;
+    if (typeof UltimateDetector !== 'undefined' && UltimateDetector.isRunning()) {
+      btn.classList.add('active');
+      btn.textContent = 'Checking...';
+    } else {
+      btn.classList.remove('active');
+      btn.textContent = 'Check';
+    }
   }
 
   // ── Update All ─────────────────────────────────────────────────────
@@ -2106,6 +2165,10 @@
     renderChangelog();
     renderUltimateTab();
     initUltimateExport();
+    initAlt1Check();
+    if (typeof alt1 !== 'undefined') {
+      try { alt1.identifyAppUrl('./appconfig.json'); } catch (e) { /* ignore */ }
+    }
     if (typeof initPlayerLookup === 'function') initPlayerLookup();
     if (typeof initGoalsTab === 'function') initGoalsTab();
   }
