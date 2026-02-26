@@ -217,16 +217,16 @@
           var nFound = refs[nSlug] && imageFound(nSlug);
 
           if (colorFound && !nFound) {
-            // Colored icon alone → obtained
-            changes[drop.item] = true;
+            changes[drop.item] = { v: true, method: 'color icon only' };
             hasChanges = true;
           } else if (!colorFound && nFound) {
-            // -n alone → obtained
-            changes[drop.item] = true;
+            changes[drop.item] = { v: true, method: '-n only' };
+            hasChanges = true;
+          } else if (colorFound && nFound) {
+            changes[drop.item] = { v: 'conflict', reason: 'both found' };
             hasChanges = true;
           } else {
-            // Both found OR both not found → ambiguous, flash for manual review
-            changes[drop.item] = 'conflict';
+            changes[drop.item] = { v: 'conflict', reason: 'both not found' };
             hasChanges = true;
           }
           return;
@@ -234,15 +234,13 @@
 
         // ── Normal items: -n only detection ──
         if (refs[nSlug] && imageFound(nSlug)) {
-          // Empty slot found on screen — item NOT obtained
-          changes[drop.item] = false;
+          changes[drop.item] = { v: false, method: '-n found' };
           hasChanges = true;
           return;
         }
 
         if (refs[nSlug] && !isScrollArea) {
-          // -n not found and area doesn't scroll — item IS obtained
-          changes[drop.item] = true;
+          changes[drop.item] = { v: true, method: '-n not found (no scroll)' };
           hasChanges = true;
         }
         // If scroll area and -n not found: don't update (might be off-screen)
@@ -253,15 +251,24 @@
       var checked = [];
       var unchecked = [];
       var flashed = [];
+      var cbChanges = {};
       Object.keys(changes).forEach(function (item) {
-        if (changes[item] === 'conflict') flashed.push(item);
-        else if (changes[item]) checked.push(item);
-        else unchecked.push(item);
+        var c = changes[item];
+        if (c.v === 'conflict') {
+          flashed.push(item + ' (' + c.reason + ')');
+          cbChanges[item] = 'conflict';
+        } else if (c.v) {
+          checked.push(item + ' [' + c.method + ']');
+          cbChanges[item] = true;
+        } else {
+          unchecked.push(item + ' [' + c.method + ']');
+          cbChanges[item] = false;
+        }
       });
       if (checked.length) console.log('[UltDetect] Checked: ' + checked.join(', '));
       if (unchecked.length) console.log('[UltDetect] Unchecked: ' + unchecked.join(', '));
-      if (flashed.length) console.log('[UltDetect] Flash (conflict): ' + flashed.join(', '));
-      if (onUpdateCb) onUpdateCb(changes);
+      if (flashed.length) console.log('[UltDetect] Flash: ' + flashed.join(', '));
+      if (onUpdateCb) onUpdateCb(cbChanges);
     }
   }
 
