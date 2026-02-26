@@ -1,8 +1,7 @@
 // Ultimate Slayer Alt1 Image Detector
-// Detects collection log areas using dual detection per item:
+// Detects collection log areas using colored icon detection only:
 //   colored icon found → item obtained (checked)
-//   -n (empty slot) found, no colored icon → item not obtained (unchecked)
-//   neither found → no update (item off-screen or area not visible)
+//   colored icon not found → no update (never auto-unchecks)
 
 (function () {
   'use strict';
@@ -16,9 +15,8 @@
   var onUpdateCb = null;
   var initialized = false;
 
-  // All items use dual detection: colored icon (.png) + empty slot (-n.png).
-  // Colored icon found → obtained. -n found (no color) → not obtained.
-  // Neither found → no update (handles scroll/off-screen naturally).
+  // All items: only the colored icon (.png) is used for detection.
+  // Found → check. Not found → no change (never auto-unchecks).
 
   // ── A1lib Resolution ──────────────────────────────────────────────
   function resolveLib() {
@@ -84,11 +82,7 @@
     }
   }
 
-  // ── Build image reference keys ────────────────────────────────────
-  function itemSlug(itemName) {
-    return itemName.replace(/\s+/g, '_') + '-n';
-  }
-
+  // ── Build image reference key ─────────────────────────────────────
   function colorSlug(itemName) {
     return itemName.replace(/\s+/g, '_');
   }
@@ -122,28 +116,24 @@
       }
     });
 
-    // Load item images (both colored icon and -n for every item)
+    // Load colored icon for every item
     ULTIMATE_AREAS.forEach(function (area) {
       area.drops.forEach(function (drop) {
-        var nSlug = itemSlug(drop.item);
         var cSlug = colorSlug(drop.item);
-        promises.push(loadRef(nSlug, 'images/ultimate/' + nSlug + '.png'));
         promises.push(loadRef(cSlug, 'images/ultimate/' + cSlug + '.png'));
       });
     });
 
     return Promise.all(promises).then(function () {
       var areaCount = ULTIMATE_AREAS.filter(function (a) { return refs['area_' + a.id]; }).length;
-      var nCount = 0;
       var colorCount = 0;
       ULTIMATE_AREAS.forEach(function (area) {
         area.drops.forEach(function (drop) {
-          if (refs[itemSlug(drop.item)]) nCount++;
           if (refs[colorSlug(drop.item)]) colorCount++;
         });
       });
       console.log('[UltDetect] Loaded ' + areaCount + ' area images, ' +
-        nCount + ' -n items, ' + colorCount + ' colored icons.');
+        colorCount + ' colored icons.');
       initialized = true;
     });
   }
@@ -160,42 +150,25 @@
       // Check if this area's identifier is visible on screen
       if (!imageFound('area_' + area.id)) return;
 
-      // Area is visible — check each item with dual detection
+      // Area is visible — check each item's colored icon only
       area.drops.forEach(function (drop) {
-        var nSlug = itemSlug(drop.item);
         var cSlug = colorSlug(drop.item);
-        var colorFound = refs[cSlug] && imageFound(cSlug);
-        var nFound = refs[nSlug] && imageFound(nSlug);
-
-        if (colorFound) {
-          // Colored icon visible → item obtained (wins even if -n false-positives)
+        if (refs[cSlug] && imageFound(cSlug)) {
           changes[drop.item] = { v: true, method: 'color icon found' };
           hasChanges = true;
-        } else if (nFound) {
-          // Empty slot visible, no colored icon → item not obtained
-          changes[drop.item] = { v: false, method: '-n found' };
-          hasChanges = true;
         }
-        // Neither found → item off-screen or area not focused; no update
+        // Not found → no update (never auto-unchecks)
       });
     });
 
     if (hasChanges) {
       var checked = [];
-      var unchecked = [];
       var cbChanges = {};
       Object.keys(changes).forEach(function (item) {
-        var c = changes[item];
-        if (c.v) {
-          checked.push(item + ' [' + c.method + ']');
-          cbChanges[item] = true;
-        } else {
-          unchecked.push(item + ' [' + c.method + ']');
-          cbChanges[item] = false;
-        }
+        checked.push(item);
+        cbChanges[item] = true;
       });
       if (checked.length) console.log('[UltDetect] Checked: ' + checked.join(', '));
-      if (unchecked.length) console.log('[UltDetect] Unchecked: ' + unchecked.join(', '));
       if (onUpdateCb) onUpdateCb(cbChanges);
     }
   }
