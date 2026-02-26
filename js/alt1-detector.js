@@ -19,28 +19,13 @@
   // 'f' = use -f.png, 'icon' = use normal .png (no suffix)
   // If -n found → not obtained. If colored icon found → obtained.
   // If neither found → state unchanged (safe, no false positives).
+  // Items whose -n images NEVER match on screen (broken silhouettes).
+  // These get dual detection: color icon + -n, with flash on ambiguity.
+  // Items with reliable -n were removed — they work fine as normal items.
   var REVERSE_DETECT = {
-    // Items with -f images
-    'Steadfast Boots': 'f',
-    'Glaiven Boots': 'f',
-    'Ragefire Boots': 'f',
     'Grifolic Wand': 'f',
-    'Grifolic Gloves': 'f',
     'Nightmare Gauntlets': 'f',
-    // Items using normal .png icon
-    'Grifolic Shield': 'icon',
     'Grifolic Orb': 'icon',
-    'Shade Robe (top)': 'icon',
-    'Shade Robe (bottom)': 'icon',
-    'Tortoise Shell': 'icon',
-    'Perfect Shell': 'icon',
-    'Dwarf Multicannon Upgrade Kit': 'icon',
-    'Kinetic Cyclone Upgrade Kit': 'icon',
-    'Oldak Coil Upgrade Kit': 'icon',
-    'Red Dragon Egg': 'icon',
-    'Blue Dragon Egg': 'icon',
-    'Green Dragon Egg': 'icon',
-    'Black Dragon Egg': 'icon',
     'Royal Cape': 'icon',
     'Razorback Gauntlets': 'icon',
     'Vital Spark': 'icon',
