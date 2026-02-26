@@ -195,22 +195,22 @@
     if (!captureScreen()) return;
 
     var changes = {};
-    var checked = [];
-    var unchecked = [];
-    var flashed = [];
 
     ULTIMATE_AREAS.forEach(function (area) {
       // Check if this area's identifier is visible on screen
       if (!imageFound('area_' + area.id)) return;
 
       var isScrollArea = !!SCROLL_AREAS[area.id];
+      var areaObtained = [];
+      var areaNotObtained = [];
+      var areaFlash = [];
 
       // Area is visible — check each item
       area.drops.forEach(function (drop) {
         if (SKIP_DETECT[drop.item]) {
           // Unreliable detection — flash to prompt manual check
           changes[drop.item] = { v: 'flash', reason: 'manual-only item' };
-          flashed.push(drop.item);
+          areaFlash.push(drop.item);
           return;
         }
 
@@ -219,7 +219,9 @@
           var fSlug = itemSlugFound(drop.item);
           if (refs[fSlug] && imageFound(fSlug)) {
             changes[drop.item] = { v: true, method: '-f found' };
-            checked.push(drop.item);
+            areaObtained.push(drop.item + ' (-f)');
+          } else if (refs[fSlug]) {
+            areaNotObtained.push(drop.item + ' (-f not found)');
           }
           // Not found — leave state unchanged (manual toggle)
         } else {
@@ -230,20 +232,23 @@
           if (imageFound(slug)) {
             // Empty slot found on screen — item NOT obtained
             changes[drop.item] = { v: false, method: '-n found' };
-            unchecked.push(drop.item);
+            areaNotObtained.push(drop.item + ' (-n found)');
           } else if (!isScrollArea) {
             // Empty slot NOT found, and area doesn't scroll — item IS obtained
             changes[drop.item] = { v: true, method: '-n not found (no scroll)' };
-            checked.push(drop.item);
+            areaObtained.push(drop.item + ' (-n not found)');
           }
           // If scroll area and -n not found: don't update (might be off-screen)
         }
       });
-    });
 
-    if (checked.length) console.log('[UltDetect] Checked: ' + checked.join(', '));
-    if (unchecked.length) console.log('[UltDetect] Unchecked: ' + unchecked.join(', '));
-    if (flashed.length) console.log('[UltDetect] Flash: ' + flashed.join(', '));
+      // Per-area log
+      var parts = [];
+      if (areaObtained.length) parts.push('Obtained (' + areaObtained.length + '): ' + areaObtained.join(', '));
+      if (areaNotObtained.length) parts.push('Not obtained (' + areaNotObtained.length + '): ' + areaNotObtained.join(', '));
+      if (areaFlash.length) parts.push('Flash (' + areaFlash.length + '): ' + areaFlash.join(', '));
+      if (parts.length) console.log('[UltDetect] ' + area.id + ' | ' + parts.join(' | '));
+    });
 
     if (Object.keys(changes).length && onUpdateCb) {
       onUpdateCb(changes);
