@@ -105,24 +105,40 @@
   }
 
   // ── Image Matching ────────────────────────────────────────────────
+  // Returns true if the named reference image is found on screen
+  function imageFound(name) {
+    if (!refs[name] || !screen) return false;
+    try {
+      var hits = typeof screen.findSubimage === 'function'
+        ? screen.findSubimage(refs[name])
+        : lib.findSubimage(screen, refs[name]);
+      return Array.isArray(hits) && hits.length > 0;
+    } catch (e) {
+      return false;
+    }
+  }
+
   // Returns position {x, y} if found, null otherwise
+  // Handles both flat arrays [x, y, ...] and object arrays [{x, y}, ...]
   function findImage(name) {
     if (!refs[name] || !screen) return null;
     try {
       var hits = typeof screen.findSubimage === 'function'
         ? screen.findSubimage(refs[name])
         : lib.findSubimage(screen, refs[name]);
-      if (Array.isArray(hits) && hits.length >= 2) {
+      if (!Array.isArray(hits) || hits.length === 0) return null;
+      // Object array format: [{x, y}, ...]
+      if (typeof hits[0] === 'object' && hits[0] !== null) {
+        return { x: hits[0].x, y: hits[0].y };
+      }
+      // Flat array format: [x, y, ...]
+      if (hits.length >= 2) {
         return { x: hits[0], y: hits[1] };
       }
       return null;
     } catch (e) {
       return null;
     }
-  }
-
-  function imageFound(name) {
-    return findImage(name) !== null;
   }
 
   // ── Screen Capture ────────────────────────────────────────────────
