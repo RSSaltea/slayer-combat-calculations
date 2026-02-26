@@ -1,7 +1,5 @@
 // Ultimate Slayer Alt1 Image Detector
-// Detects collection log areas using colored icon detection only:
-//   colored icon found → item obtained (checked)
-//   colored icon not found → no update (never auto-unchecks)
+// Detects collection log areas and empty-slot (-n) images to auto-track obtained items
 
 (function () {
   'use strict';
@@ -15,8 +13,47 @@
   var onUpdateCb = null;
   var initialized = false;
 
-  // All items: only the colored icon (.png) is used for detection.
-  // Found → check. Not found → no change (never auto-unchecks).
+  // ── Items where -n detection gives false results ──────────────────
+  // These items are skipped entirely — user must toggle manually
+  var SKIP_DETECT = {
+    // -n image not found even when item IS empty (shows obtained when not)
+    'Grifolic Shield': true,
+    'Grifolic Orb': true,
+    'Tortoise Shell': true,
+    'Perfect Shell': true,
+    'Dwarf Multicannon Upgrade Kit': true,
+    'Kinetic Cyclone Upgrade Kit': true,
+    'Oldak Coil Upgrade Kit': true,
+    'Red Dragon Egg': true,
+    'Blue Dragon Egg': true,
+    'Green Dragon Egg': true,
+    'Black Dragon Egg': true,
+    // -n image matches incorrectly (shows obtained when not)
+    'Royal Cape': true,
+    'Razorback Gauntlets': true,
+    'Vital Spark': true,
+    'Dragon Rider Helm': true
+  };
+
+  // Items where -n detection is unreliable — detect the -f (colored) image instead
+  // Auto-checks when obtained; leaves state unchanged when not found
+  var REVERSE_DETECT = {
+    'Steadfast Boots': true,
+    'Glaiven Boots': true,
+    'Ragefire Boots': true,
+    'Grifolic Wand': true,
+    'Grifolic Gloves': true,
+    'Nightmare Gauntlets': true,
+    'Shade Robe (top)': true,
+    'Shade Robe (bottom)': true
+  };
+
+  // Areas that require scrolling (more items than fit on one page).
+  // For these, only mark items as NOT obtained when -n IS found.
+  // Don't infer obtained from absence — item might be scrolled off screen.
+  var SCROLL_AREAS = {
+    'wilderness': true
+  };
 
   // ── A1lib Resolution ──────────────────────────────────────────────
   function resolveLib() {
@@ -82,9 +119,13 @@
     }
   }
 
-  // ── Build image reference key ─────────────────────────────────────
-  function colorSlug(itemName) {
-    return itemName.replace(/\s+/g, '_');
+  // ── Build item slug for -n image key ──────────────────────────────
+  function itemSlug(itemName) {
+    return itemName.replace(/\s+/g, '_') + '-n';
+  }
+
+  function itemSlugFound(itemName) {
+    return itemName.replace(/\s+/g, '_') + '-f';
   }
 
   // ── Initialize: load all area + item images ───────────────────────
@@ -116,24 +157,34 @@
       }
     });
 
-    // Load colored icon for every item
+    // Load item images
     ULTIMATE_AREAS.forEach(function (area) {
       area.drops.forEach(function (drop) {
-        var cSlug = colorSlug(drop.item);
-        promises.push(loadRef(cSlug, 'images/ultimate/' + cSlug + '.png'));
+        if (SKIP_DETECT[drop.item]) return; // skip — manual toggle only
+
+        if (REVERSE_DETECT[drop.item]) {
+          // Load -f (found/colored) image for reverse detection
+          var fSlug = itemSlugFound(drop.item);
+          promises.push(loadRef(fSlug, 'images/ultimate/' + fSlug + '.png'));
+        } else {
+          // Load -n (empty slot) image for normal detection
+          var slug = itemSlug(drop.item);
+          promises.push(loadRef(slug, 'images/ultimate/' + slug + '.png'));
+        }
       });
     });
 
     return Promise.all(promises).then(function () {
       var areaCount = ULTIMATE_AREAS.filter(function (a) { return refs['area_' + a.id]; }).length;
-      var colorCount = 0;
+      var itemCount = 0;
       ULTIMATE_AREAS.forEach(function (area) {
         area.drops.forEach(function (drop) {
-          if (refs[colorSlug(drop.item)]) colorCount++;
+          if (refs[itemSlug(drop.item)] || refs[itemSlugFound(drop.item)]) itemCount++;
         });
       });
+      var skipCount = Object.keys(SKIP_DETECT).length;
       console.log('[UltDetect] Loaded ' + areaCount + ' area images, ' +
-        colorCount + ' colored icons.');
+        itemCount + ' item images, ' + skipCount + ' manual-only items.');
       initialized = true;
     });
   }
@@ -150,26 +201,41 @@
       // Check if this area's identifier is visible on screen
       if (!imageFound('area_' + area.id)) return;
 
-      // Area is visible — check each item's colored icon only
+      var isScrollArea = !!SCROLL_AREAS[area.id];
+
+      // Area is visible — check each item
       area.drops.forEach(function (drop) {
-        var cSlug = colorSlug(drop.item);
-        if (refs[cSlug] && imageFound(cSlug)) {
-          changes[drop.item] = { v: true, method: 'color icon found' };
-          hasChanges = true;
+        if (SKIP_DETECT[drop.item]) return; // skip — manual toggle
+
+        if (REVERSE_DETECT[drop.item]) {
+          // Only check -f (found) image — if found, mark obtained
+          var fSlug = itemSlugFound(drop.item);
+          if (refs[fSlug] && imageFound(fSlug)) {
+            changes[drop.item] = true;
+            hasChanges = true;
+          }
+          // Not found — leave state unchanged (manual toggle)
+        } else {
+          // Normal detection: look for the -n (empty slot) image
+          var slug = itemSlug(drop.item);
+          if (!refs[slug]) return;
+
+          if (imageFound(slug)) {
+            // Empty slot found on screen — item NOT obtained
+            changes[drop.item] = false;
+            hasChanges = true;
+          } else if (!isScrollArea) {
+            // Empty slot NOT found, and area doesn't scroll — item IS obtained
+            changes[drop.item] = true;
+            hasChanges = true;
+          }
+          // If scroll area and -n not found: don't update (might be off-screen)
         }
-        // Not found → no update (never auto-unchecks)
       });
     });
 
-    if (hasChanges) {
-      var checked = [];
-      var cbChanges = {};
-      Object.keys(changes).forEach(function (item) {
-        checked.push(item);
-        cbChanges[item] = true;
-      });
-      if (checked.length) console.log('[UltDetect] Checked: ' + checked.join(', '));
-      if (onUpdateCb) onUpdateCb(cbChanges);
+    if (hasChanges && onUpdateCb) {
+      onUpdateCb(changes);
     }
   }
 
