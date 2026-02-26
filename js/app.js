@@ -2156,13 +2156,11 @@
     var area = state.ultimateActiveArea;
     var msg = '';
     if (area === 'morytania') {
-      msg = 'Grifolic items and Dragon Rider Helm must be toggled manually';
+      msg = 'Grifolic Shield, Grifolic Orb and Dragon Rider Helm must be toggled manually';
     } else if (area === 'asgarnia_misthalin') {
-      msg = 'Royal Cape and Shade Robes must be toggled manually';
+      msg = 'Royal Cape must be toggled manually';
     } else if (area === 'kandarin') {
       msg = 'Tortoise Shell, Perfect Shell and Razorback Gauntlets must be toggled manually';
-    } else if (area === 'other_worlds') {
-      msg = 'Nightmare Gauntlets must be toggled manually';
     } else if (area === 'kharidian_desert') {
       msg = 'Vital Spark must be toggled manually';
     } else if (area === 'general') {

@@ -18,12 +18,7 @@
   var SKIP_DETECT = {
     // -n image not found even when item IS empty (shows obtained when not)
     'Grifolic Shield': true,
-    'Grifolic Wand': true,
     'Grifolic Orb': true,
-    'Grifolic Gloves': true,
-    'Nightmare Gauntlets': true,
-    'Shade Robe (top)': true,
-    'Shade Robe (bottom)': true,
     'Tortoise Shell': true,
     'Perfect Shell': true,
     'Dwarf Multicannon Upgrade Kit': true,
@@ -40,11 +35,17 @@
     'Dragon Rider Helm': true
   };
 
-  // Items where -n detection is unreliable — detect the actual item image instead
+  // Items where -n detection is unreliable — detect the -f (colored) image instead
+  // Auto-checks when obtained; leaves state unchanged when not found
   var REVERSE_DETECT = {
     'Steadfast Boots': true,
     'Glaiven Boots': true,
-    'Ragefire Boots': true
+    'Ragefire Boots': true,
+    'Grifolic Wand': true,
+    'Grifolic Gloves': true,
+    'Nightmare Gauntlets': true,
+    'Shade Robe (top)': true,
+    'Shade Robe (bottom)': true
   };
 
   // Areas that require scrolling (more items than fit on one page).
