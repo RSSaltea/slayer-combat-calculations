@@ -1824,6 +1824,46 @@
     updateAlt1CheckButton();
   }
 
+  // ── Ultimate Uncheck ─────────────────────────────────────────────
+  function initUltimateUncheck() {
+    var btn = document.getElementById('ultimate-uncheck-btn');
+    var menu = document.getElementById('ultimate-uncheck-menu');
+    if (!btn || !menu) return;
+
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      // Close export menu if open
+      var exportMenu = document.getElementById('ultimate-export-menu');
+      if (exportMenu) exportMenu.classList.remove('open');
+      menu.classList.toggle('open');
+    });
+
+    document.addEventListener('click', function () {
+      menu.classList.remove('open');
+    });
+
+    menu.addEventListener('click', function (e) {
+      var opt = e.target.closest('.ultimate-uncheck-option');
+      if (!opt) return;
+      menu.classList.remove('open');
+      var mode = opt.dataset.mode;
+
+      if (mode === 'all') {
+        if (!confirm('Uncheck all items across every area?')) return;
+        state.ultimateObtained = {};
+      } else {
+        var area = ULTIMATE_AREAS.find(function (a) { return a.id === state.ultimateActiveArea; });
+        if (!area) return;
+        if (!confirm('Uncheck all items in ' + area.title + '?')) return;
+        area.drops.forEach(function (drop) {
+          delete state.ultimateObtained[drop.item];
+        });
+      }
+      saveState();
+      renderUltimateTab();
+    });
+  }
+
   // ── Ultimate Export ───────────────────────────────────────────────
   function initUltimateExport() {
     var btn = document.getElementById('ultimate-export-btn');
@@ -1832,6 +1872,9 @@
 
     btn.addEventListener('click', function (e) {
       e.stopPropagation();
+      // Close uncheck menu if open
+      var uncheckMenu = document.getElementById('ultimate-uncheck-menu');
+      if (uncheckMenu) uncheckMenu.classList.remove('open');
       menu.classList.toggle('open');
     });
 
@@ -2216,6 +2259,7 @@
     renderTodoList();
     renderChangelog();
     renderUltimateTab();
+    initUltimateUncheck();
     initUltimateExport();
     initAlt1Check();
     if (typeof alt1 !== 'undefined') {

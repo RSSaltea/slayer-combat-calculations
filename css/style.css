@@ -1742,6 +1742,7 @@ body {
   position: relative;
   display: flex;
   align-items: center;
+  gap: 0.4rem;
 }
 
 .ultimate-export-btn {
@@ -1797,6 +1798,30 @@ body {
 .ultimate-export-option:hover {
   background: var(--bg-card-hover);
   color: var(--gold);
+}
+
+.ultimate-export-btn:hover + .ultimate-export-menu,
+.ultimate-uncheck-option {
+  /* inherits from .ultimate-export-option */
+}
+
+.ultimate-uncheck-option {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0.55rem 0.85rem;
+  font-size: 0.78rem;
+  font-family: inherit;
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s;
+}
+
+.ultimate-uncheck-option:hover {
+  background: var(--bg-card-hover);
+  color: #ef5350;
 }
 
 /* Item grid */
