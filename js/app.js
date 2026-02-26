@@ -2153,22 +2153,9 @@
       notice.style.display = 'none';
       return;
     }
-    var area = state.ultimateActiveArea;
     var msg = '';
-    if (area === 'morytania') {
-      msg = 'Grifolic Shield, Grifolic Orb and Dragon Rider Helm must be toggled manually';
-    } else if (area === 'asgarnia_misthalin') {
-      msg = 'Royal Cape must be toggled manually';
-    } else if (area === 'kandarin') {
-      msg = 'Tortoise Shell, Perfect Shell and Razorback Gauntlets must be toggled manually';
-    } else if (area === 'kharidian_desert') {
-      msg = 'Vital Spark must be toggled manually';
-    } else if (area === 'general') {
-      msg = 'Dragon Eggs must be toggled manually';
-    } else if (area === 'senntisten') {
-      msg = 'Upgrade Kits must be toggled manually';
-    } else if (area === 'wilderness') {
-      msg = 'Scroll through all items slowly to detect; obtained items must be toggled manually';
+    if (state.ultimateActiveArea === 'wilderness') {
+      msg = 'Scroll through all items slowly to detect everything';
     }
     if (msg) {
       notice.textContent = msg;

@@ -1,5 +1,6 @@
 // Ultimate Slayer Alt1 Image Detector
 // Detects collection log areas and empty-slot (-n) images to auto-track obtained items
+// Items with unreliable -n matching also check for the colored icon as fallback
 
 (function () {
   'use strict';
@@ -13,39 +14,38 @@
   var onUpdateCb = null;
   var initialized = false;
 
-  // ── Items where -n detection gives false results ──────────────────
-  // These items are skipped entirely — user must toggle manually
-  var SKIP_DETECT = {
-    // -n image not found even when item IS empty (shows obtained when not)
-    'Grifolic Shield': true,
-    'Grifolic Orb': true,
-    'Tortoise Shell': true,
-    'Perfect Shell': true,
-    'Dwarf Multicannon Upgrade Kit': true,
-    'Kinetic Cyclone Upgrade Kit': true,
-    'Oldak Coil Upgrade Kit': true,
-    'Red Dragon Egg': true,
-    'Blue Dragon Egg': true,
-    'Green Dragon Egg': true,
-    'Black Dragon Egg': true,
-    // -n image matches incorrectly (shows obtained when not)
-    'Royal Cape': true,
-    'Razorback Gauntlets': true,
-    'Vital Spark': true,
-    'Dragon Rider Helm': true
-  };
-
-  // Items where -n detection is unreliable — detect the -f (colored) image instead
-  // Auto-checks when obtained; leaves state unchanged when not found
+  // ── Items with unreliable -n detection ──────────────────────────
+  // These get dual detection: -n first, then colored icon fallback.
+  // 'f' = use -f.png, 'icon' = use normal .png (no suffix)
+  // If -n found → not obtained. If colored icon found → obtained.
+  // If neither found → state unchanged (safe, no false positives).
   var REVERSE_DETECT = {
-    'Steadfast Boots': true,
-    'Glaiven Boots': true,
-    'Ragefire Boots': true,
-    'Grifolic Wand': true,
-    'Grifolic Gloves': true,
-    'Nightmare Gauntlets': true,
-    'Shade Robe (top)': true,
-    'Shade Robe (bottom)': true
+    // Items with -f images
+    'Steadfast Boots': 'f',
+    'Glaiven Boots': 'f',
+    'Ragefire Boots': 'f',
+    'Grifolic Wand': 'f',
+    'Grifolic Gloves': 'f',
+    'Nightmare Gauntlets': 'f',
+    // Items using normal .png icon
+    'Grifolic Shield': 'icon',
+    'Grifolic Orb': 'icon',
+    'Shade Robe (top)': 'icon',
+    'Shade Robe (bottom)': 'icon',
+    'Tortoise Shell': 'icon',
+    'Perfect Shell': 'icon',
+    'Dwarf Multicannon Upgrade Kit': 'icon',
+    'Kinetic Cyclone Upgrade Kit': 'icon',
+    'Oldak Coil Upgrade Kit': 'icon',
+    'Red Dragon Egg': 'icon',
+    'Blue Dragon Egg': 'icon',
+    'Green Dragon Egg': 'icon',
+    'Black Dragon Egg': 'icon',
+    'Royal Cape': 'icon',
+    'Razorback Gauntlets': 'icon',
+    'Vital Spark': 'icon',
+    'Dragon Rider Helm': 'icon',
+    'Fremennik Equipment Patch': 'icon'
   };
 
   // Areas that require scrolling (more items than fit on one page).
@@ -119,13 +119,14 @@
     }
   }
 
-  // ── Build item slug for -n image key ──────────────────────────────
+  // ── Build image reference keys ────────────────────────────────────
   function itemSlug(itemName) {
     return itemName.replace(/\s+/g, '_') + '-n';
   }
 
-  function itemSlugFound(itemName) {
-    return itemName.replace(/\s+/g, '_') + '-f';
+  function reverseSlug(itemName, type) {
+    var base = itemName.replace(/\s+/g, '_');
+    return type === 'f' ? base + '-f' : base;
   }
 
   // ── Initialize: load all area + item images ───────────────────────
@@ -160,16 +161,14 @@
     // Load item images
     ULTIMATE_AREAS.forEach(function (area) {
       area.drops.forEach(function (drop) {
-        if (SKIP_DETECT[drop.item]) return; // skip — manual toggle only
+        // Always load -n image
+        var nSlug = itemSlug(drop.item);
+        promises.push(loadRef(nSlug, 'images/ultimate/' + nSlug + '.png'));
 
+        // For unreliable items, also load the colored icon as fallback
         if (REVERSE_DETECT[drop.item]) {
-          // Load -f (found/colored) image for reverse detection
-          var fSlug = itemSlugFound(drop.item);
-          promises.push(loadRef(fSlug, 'images/ultimate/' + fSlug + '.png'));
-        } else {
-          // Load -n (empty slot) image for normal detection
-          var slug = itemSlug(drop.item);
-          promises.push(loadRef(slug, 'images/ultimate/' + slug + '.png'));
+          var rSlug = reverseSlug(drop.item, REVERSE_DETECT[drop.item]);
+          promises.push(loadRef(rSlug, 'images/ultimate/' + rSlug + '.png'));
         }
       });
     });
@@ -177,14 +176,18 @@
     return Promise.all(promises).then(function () {
       var areaCount = ULTIMATE_AREAS.filter(function (a) { return refs['area_' + a.id]; }).length;
       var itemCount = 0;
+      var reverseCount = 0;
       ULTIMATE_AREAS.forEach(function (area) {
         area.drops.forEach(function (drop) {
-          if (refs[itemSlug(drop.item)] || refs[itemSlugFound(drop.item)]) itemCount++;
+          if (refs[itemSlug(drop.item)]) itemCount++;
+          if (REVERSE_DETECT[drop.item]) {
+            var rSlug = reverseSlug(drop.item, REVERSE_DETECT[drop.item]);
+            if (refs[rSlug]) reverseCount++;
+          }
         });
       });
-      var skipCount = Object.keys(SKIP_DETECT).length;
       console.log('[UltDetect] Loaded ' + areaCount + ' area images, ' +
-        itemCount + ' item images, ' + skipCount + ' manual-only items.');
+        itemCount + ' -n items, ' + reverseCount + ' reverse-detect fallbacks.');
       initialized = true;
     });
   }
@@ -205,32 +208,35 @@
 
       // Area is visible — check each item
       area.drops.forEach(function (drop) {
-        if (SKIP_DETECT[drop.item]) return; // skip — manual toggle
+        var nSlug = itemSlug(drop.item);
 
-        if (REVERSE_DETECT[drop.item]) {
-          // Only check -f (found) image — if found, mark obtained
-          var fSlug = itemSlugFound(drop.item);
-          if (refs[fSlug] && imageFound(fSlug)) {
-            changes[drop.item] = true;
-            hasChanges = true;
-          }
-          // Not found — leave state unchanged (manual toggle)
-        } else {
-          // Normal detection: look for the -n (empty slot) image
-          var slug = itemSlug(drop.item);
-          if (!refs[slug]) return;
-
-          if (imageFound(slug)) {
-            // Empty slot found on screen — item NOT obtained
-            changes[drop.item] = false;
-            hasChanges = true;
-          } else if (!isScrollArea) {
-            // Empty slot NOT found, and area doesn't scroll — item IS obtained
-            changes[drop.item] = true;
-            hasChanges = true;
-          }
-          // If scroll area and -n not found: don't update (might be off-screen)
+        // Step 1: Try -n detection (empty slot image)
+        if (refs[nSlug] && imageFound(nSlug)) {
+          // Empty slot found on screen — item NOT obtained
+          changes[drop.item] = false;
+          hasChanges = true;
+          return;
         }
+
+        // Step 2: For items with unreliable -n, check colored icon fallback
+        if (REVERSE_DETECT[drop.item]) {
+          var rSlug = reverseSlug(drop.item, REVERSE_DETECT[drop.item]);
+          if (refs[rSlug] && imageFound(rSlug)) {
+            // Colored icon found — item IS obtained
+            changes[drop.item] = true;
+            hasChanges = true;
+          }
+          // Neither found — leave state unchanged (no false positives)
+          return;
+        }
+
+        // Step 3: Normal -n only item, -n not found
+        if (refs[nSlug] && !isScrollArea) {
+          // Area doesn't scroll — item IS obtained
+          changes[drop.item] = true;
+          hasChanges = true;
+        }
+        // If scroll area and -n not found: don't update (might be off-screen)
       });
     });
 
