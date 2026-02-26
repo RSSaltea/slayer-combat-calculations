@@ -249,8 +249,19 @@
       });
     });
 
-    if (hasChanges && onUpdateCb) {
-      onUpdateCb(changes);
+    if (hasChanges) {
+      var checked = [];
+      var unchecked = [];
+      var flashed = [];
+      Object.keys(changes).forEach(function (item) {
+        if (changes[item] === 'conflict') flashed.push(item);
+        else if (changes[item]) checked.push(item);
+        else unchecked.push(item);
+      });
+      if (checked.length) console.log('[UltDetect] Checked: ' + checked.join(', '));
+      if (unchecked.length) console.log('[UltDetect] Unchecked: ' + unchecked.join(', '));
+      if (flashed.length) console.log('[UltDetect] Flash (conflict): ' + flashed.join(', '));
+      if (onUpdateCb) onUpdateCb(changes);
     }
   }
 
