@@ -1,6 +1,6 @@
 // Ultimate Slayer Alt1 Image Detector
-// Follows the same pattern as vorkath-gm-timer's haunt-detector.js
-// Detects collection log areas and empty-slot (-n) images to auto-track obtained items
+// Primary: -n (empty slot) subimage matching for most items
+// Fallback: saturation check at grid positions for items where -n matching is unreliable
 
 (function () {
   'use strict';
@@ -14,7 +14,56 @@
   var onUpdateCb = null;
   var initialized = false;
 
-  // ── A1lib Resolution (same as vorkath) ──────────────────────────────
+  // ── Grid Layout (RS3 Collection Log) ──────────────────────────────
+  var GRID = {
+    cols: 6,           // items per row
+    colPitch: 42,      // px between column starts
+    rowPitch: 38,      // px between row starts
+    cellW: 36,         // cell content width
+    cellH: 32          // cell content height
+  };
+
+  // Default offset from area header to first grid cell (on screen)
+  // Measured from multiple areas, consistent within ±2px
+  var HEADER_DX = -14;
+  var HEADER_DY = 36;
+
+  // Per-area overrides where the offset differs significantly
+  var HEADER_DY_OVERRIDE = {
+    'lost_lands': 65    // two-line header text
+  };
+
+  // Saturation threshold: avg saturation below this = grey (not obtained)
+  var SAT_THRESHOLD = 12;
+
+  // ── Items where -n detection is unreliable ────────────────────────
+  // These use saturation check at their grid position instead
+  var SATURATION_DETECT = {
+    // False positives — -n image not found even when item IS empty
+    'Grifolic Shield': true,
+    'Grifolic Wand': true,
+    'Grifolic Orb': true,
+    'Grifolic Gloves': true,
+    'Nightmare Gauntlets': true,
+    // Items that don't detect correctly with -n matching
+    'Shade Robe (top)': true,
+    'Shade Robe (bottom)': true,
+    'Tortoise Shell': true,
+    'Perfect Shell': true,
+    'Dwarf Multicannon Upgrade Kit': true,
+    'Kinetic Cyclone Upgrade Kit': true,
+    'Oldak Coil Upgrade Kit': true,
+    'Red Dragon Egg': true,
+    'Blue Dragon Egg': true,
+    'Green Dragon Egg': true,
+    'Black Dragon Egg': true,
+    // Boots — previously REVERSE_DETECT, now saturation
+    'Steadfast Boots': true,
+    'Glaiven Boots': true,
+    'Ragefire Boots': true
+  };
+
+  // ── A1lib Resolution ──────────────────────────────────────────────
   function resolveLib() {
     var candidate =
       (typeof A1lib !== 'undefined' && A1lib && A1lib.captureHoldFullRs && A1lib) ||
@@ -24,7 +73,7 @@
     return lib;
   }
 
-  // ── Image Loading (same as vorkath) ─────────────────────────────────
+  // ── Image Loading ─────────────────────────────────────────────────
   function loadRef(name, path) {
     var l = resolveLib();
     if (l && typeof l.imageDataFromUrl === 'function') {
@@ -55,20 +104,28 @@
       });
   }
 
-  // ── Image Matching (same as vorkath) ────────────────────────────────
-  function imageFound(name) {
-    if (!refs[name] || !screen) return false;
+  // ── Image Matching ────────────────────────────────────────────────
+  // Returns position {x, y} if found, null otherwise
+  function findImage(name) {
+    if (!refs[name] || !screen) return null;
     try {
       var hits = typeof screen.findSubimage === 'function'
         ? screen.findSubimage(refs[name])
         : lib.findSubimage(screen, refs[name]);
-      return Array.isArray(hits) && hits.length > 0;
+      if (Array.isArray(hits) && hits.length >= 2) {
+        return { x: hits[0], y: hits[1] };
+      }
+      return null;
     } catch (e) {
-      return false;
+      return null;
     }
   }
 
-  // ── Screen Capture (same as vorkath) ────────────────────────────────
+  function imageFound(name) {
+    return findImage(name) !== null;
+  }
+
+  // ── Screen Capture ────────────────────────────────────────────────
   function captureScreen() {
     try {
       screen = lib.captureHoldFullRs();
@@ -78,7 +135,49 @@
     }
   }
 
-  // ── Build item slug for -n image key ────────────────────────────────
+  // ── Saturation Check ──────────────────────────────────────────────
+  // Reads pixels at the item's grid position and checks if they're
+  // grey (not obtained) or colored (obtained).
+  // Returns: true = obtained, false = not obtained, null = couldn't read
+  function checkSlotSaturation(slotScreenX, slotScreenY) {
+    try {
+      // Inset by 4px to avoid borders and handle ±2px offset tolerance
+      var inset = 4;
+      var cropX = slotScreenX + inset;
+      var cropY = slotScreenY + inset;
+      var cropW = GRID.cellW - inset * 2;   // 28px
+      var cropH = GRID.cellH - inset * 2;   // 24px
+
+      // Use A1lib's toData(x, y, w, h) to read pixels from screen
+      var imgData = screen.toData(cropX, cropY, cropW, cropH);
+      if (!imgData || !imgData.data) return null;
+
+      var data = imgData.data;
+      var totalSat = 0;
+      var pixels = 0;
+
+      for (var i = 0; i < data.length; i += 4) {
+        var r = data[i];
+        var g = data[i + 1];
+        var b = data[i + 2];
+        // Saturation = max - min of RGB channels
+        var mx = r > g ? (r > b ? r : b) : (g > b ? g : b);
+        var mn = r < g ? (r < b ? r : b) : (g < b ? g : b);
+        totalSat += mx - mn;
+        pixels++;
+      }
+
+      if (pixels === 0) return null;
+      var avgSat = totalSat / pixels;
+
+      return avgSat > SAT_THRESHOLD;
+    } catch (e) {
+      console.warn('[UltDetect] Saturation check failed:', e);
+      return null;
+    }
+  }
+
+  // ── Build item slug for -n image key ──────────────────────────────
   function itemSlug(itemName) {
     return itemName.replace(/\s+/g, '_') + '-n';
   }
@@ -87,14 +186,7 @@
     return itemName.replace(/\s+/g, '_') + '-f';
   }
 
-  // Items where -n detection is unreliable — detect the actual item image instead
-  var REVERSE_DETECT = {
-    'Steadfast Boots': true,
-    'Glaiven Boots': true,
-    'Ragefire Boots': true
-  };
-
-  // ── Initialize: load all area + item images ─────────────────────────
+  // ── Initialize: load all area + item images ───────────────────────
   function init(options) {
     if (options && options.onUpdate) {
       onUpdateCb = options.onUpdate;
@@ -123,17 +215,12 @@
       }
     });
 
-    // Load -n item images for all drops
+    // Load -n item images for drops that use -n detection
     ULTIMATE_AREAS.forEach(function (area) {
       area.drops.forEach(function (drop) {
+        if (SATURATION_DETECT[drop.item]) return; // skip, uses saturation
         var slug = itemSlug(drop.item);
         promises.push(loadRef(slug, 'images/ultimate/' + slug + '.png'));
-
-        // For REVERSE_DETECT items: load -f (found) images
-        if (REVERSE_DETECT[drop.item]) {
-          var fSlug = itemSlugFound(drop.item);
-          promises.push(loadRef(fSlug, 'images/ultimate/' + fSlug + '.png'));
-        }
       });
     });
 
@@ -145,12 +232,14 @@
           if (refs[itemSlug(drop.item)]) itemCount++;
         });
       });
-      console.log('[UltDetect] Loaded ' + areaCount + ' area images, ' + itemCount + ' item images.');
+      var satCount = Object.keys(SATURATION_DETECT).length;
+      console.log('[UltDetect] Loaded ' + areaCount + ' area images, ' +
+        itemCount + ' item images, ' + satCount + ' saturation-detect items.');
       initialized = true;
     });
   }
 
-  // ── Single scan cycle ───────────────────────────────────────────────
+  // ── Single scan cycle ─────────────────────────────────────────────
   function scan() {
     if (typeof alt1 === 'undefined' || !alt1.rsLinked) return;
     if (!captureScreen()) return;
@@ -159,31 +248,39 @@
     var hasChanges = false;
 
     ULTIMATE_AREAS.forEach(function (area) {
-      // Check if this area's identifier is visible on screen
-      if (!imageFound('area_' + area.id)) return;
+      // Find area header position on screen
+      var headerPos = findImage('area_' + area.id);
+      if (!headerPos) return; // area not visible
 
-      // Area is visible — check each item
-      area.drops.forEach(function (drop) {
-        var slug = itemSlug(drop.item);
+      // Calculate grid origin on screen for saturation checks
+      var dy = HEADER_DY_OVERRIDE[area.id] || HEADER_DY;
+      var gridOriginX = headerPos.x + HEADER_DX;
+      var gridOriginY = headerPos.y + dy;
 
-        if (REVERSE_DETECT[drop.item]) {
-          // Only check -f (found) image — if found, mark obtained
-          var fSlug = itemSlugFound(drop.item);
-          if (refs[fSlug] && imageFound(fSlug)) {
-            changes[drop.item] = true;
+      // Check each item
+      area.drops.forEach(function (drop, index) {
+        if (SATURATION_DETECT[drop.item]) {
+          // ── Saturation-based detection ──
+          var col = index % GRID.cols;
+          var row = Math.floor(index / GRID.cols);
+          var slotX = gridOriginX + col * GRID.colPitch;
+          var slotY = gridOriginY + row * GRID.rowPitch;
+
+          var obtained = checkSlotSaturation(slotX, slotY);
+          if (obtained !== null) {
+            changes[drop.item] = obtained;
             hasChanges = true;
           }
-          // Not found — leave state unchanged (manual toggle)
+          // null = couldn't read, leave state unchanged
         } else {
-          // Normal detection: look for the -n (empty slot) image
+          // ── Normal -n image detection ──
+          var slug = itemSlug(drop.item);
           if (!refs[slug]) return;
 
           if (imageFound(slug)) {
-            // Empty slot found on screen — item NOT obtained
-            changes[drop.item] = false;
+            changes[drop.item] = false;  // empty slot visible = not obtained
           } else {
-            // Empty slot NOT found — item IS obtained
-            changes[drop.item] = true;
+            changes[drop.item] = true;   // empty slot not found = obtained
           }
           hasChanges = true;
         }
@@ -195,7 +292,7 @@
     }
   }
 
-  // ── Start/Stop scanning ─────────────────────────────────────────────
+  // ── Start/Stop scanning ───────────────────────────────────────────
   function start() {
     if (scanInterval) return;
     scanInterval = setInterval(scan, SCAN_MS);
@@ -210,7 +307,7 @@
     }
   }
 
-  // ── Public API ──────────────────────────────────────────────────────
+  // ── Public API ────────────────────────────────────────────────────
   window.UltimateDetector = {
     init: init,
     start: start,
