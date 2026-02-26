@@ -13,15 +13,12 @@
   var onUpdateCb = null;
   var initialized = false;
 
-  // ── Items where detection gives false results ────────────────────
-  // These items are skipped entirely — user must toggle manually.
-  // On first scan after update, stale state for these items is cleared.
+  // ── Items where -n detection gives false results ──────────────────
+  // These items are skipped entirely — user must toggle manually
   var SKIP_DETECT = {
     // -n image not found even when item IS empty (shows obtained when not)
     'Grifolic Shield': true,
     'Grifolic Orb': true,
-    'Shade Robe (top)': true,
-    'Shade Robe (bottom)': true,
     'Tortoise Shell': true,
     'Perfect Shell': true,
     'Dwarf Multicannon Upgrade Kit': true,
@@ -35,12 +32,8 @@
     'Royal Cape': true,
     'Razorback Gauntlets': true,
     'Vital Spark': true,
-    'Dragon Rider Helm': true,
-    'Fremennik Equipment Patch': true
+    'Dragon Rider Helm': true
   };
-
-  // Bump this when SKIP_DETECT changes to re-clear stale state
-  var SKIP_VERSION = '2';
 
   // Items where -n detection is unreliable — detect the -f (colored) image instead
   // Auto-checks when obtained; leaves state unchanged when not found
@@ -50,7 +43,9 @@
     'Ragefire Boots': true,
     'Grifolic Wand': true,
     'Grifolic Gloves': true,
-    'Nightmare Gauntlets': true
+    'Nightmare Gauntlets': true,
+    'Shade Robe (top)': true,
+    'Shade Robe (bottom)': true
   };
 
   // Areas that require scrolling (more items than fit on one page).
@@ -195,35 +190,12 @@
   }
 
   // ── Single scan cycle ─────────────────────────────────────────────
-  function clearStaleSkipState(changes) {
-    // One-time clear: uncheck all SKIP_DETECT items that may have been
-    // incorrectly set by a previous code version. Uses localStorage
-    // version flag so it only runs once per SKIP_VERSION bump.
-    try {
-      if (localStorage.getItem('_skipDetectV') === SKIP_VERSION) return false;
-      var cleared = false;
-      ULTIMATE_AREAS.forEach(function (area) {
-        area.drops.forEach(function (drop) {
-          if (SKIP_DETECT[drop.item]) {
-            changes[drop.item] = false;
-            cleared = true;
-          }
-        });
-      });
-      localStorage.setItem('_skipDetectV', SKIP_VERSION);
-      return cleared;
-    } catch (e) { return false; }
-  }
-
   function scan() {
     if (typeof alt1 === 'undefined' || !alt1.rsLinked) return;
     if (!captureScreen()) return;
 
     var changes = {};
     var hasChanges = false;
-
-    // Clear stale state for SKIP_DETECT items (one-time after update)
-    if (clearStaleSkipState(changes)) hasChanges = true;
 
     ULTIMATE_AREAS.forEach(function (area) {
       // Check if this area's identifier is visible on screen
