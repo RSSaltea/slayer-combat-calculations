@@ -2158,7 +2158,7 @@
     if (area === 'morytania') {
       msg = 'Grifolic Shield, Grifolic Orb and Dragon Rider Helm must be toggled manually';
     } else if (area === 'asgarnia_misthalin') {
-      msg = 'Royal Cape must be toggled manually';
+      msg = 'Royal Cape and Shade Robes must be toggled manually';
     } else if (area === 'kandarin') {
       msg = 'Tortoise Shell, Perfect Shell and Razorback Gauntlets must be toggled manually';
     } else if (area === 'kharidian_desert') {
@@ -2168,7 +2168,7 @@
     } else if (area === 'senntisten') {
       msg = 'Upgrade Kits must be toggled manually';
     } else if (area === 'wilderness') {
-      msg = 'Scroll through all items slowly to detect; obtained items must be toggled manually';
+      msg = 'Fremennik Equipment Patch and obtained items must be toggled manually';
     }
     if (msg) {
       notice.textContent = msg;
