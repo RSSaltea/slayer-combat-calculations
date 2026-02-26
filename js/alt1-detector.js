@@ -1,6 +1,8 @@
 // Ultimate Slayer Alt1 Image Detector
-// Detects collection log areas and empty-slot (-n) images to auto-track obtained items
-// Items with unreliable -n matching also check for the colored icon as fallback
+// Detects collection log areas using dual detection per item:
+//   colored icon found → item obtained (checked)
+//   -n (empty slot) found, no colored icon → item not obtained (unchecked)
+//   neither found → no update (item off-screen or area not visible)
 
 (function () {
   'use strict';
@@ -14,31 +16,9 @@
   var onUpdateCb = null;
   var initialized = false;
 
-  // ── Items with unreliable -n detection ──────────────────────────
-  // These get dual detection: -n first, then colored icon fallback.
-  // 'f' = use -f.png, 'icon' = use normal .png (no suffix)
-  // If -n found → not obtained. If colored icon found → obtained.
-  // If neither found → state unchanged (safe, no false positives).
-  // Items whose -n images NEVER match on screen (broken silhouettes).
-  // These get dual detection: color icon + -n, with flash on ambiguity.
-  // Items with reliable -n were removed — they work fine as normal items.
-  var REVERSE_DETECT = {
-    'Grifolic Wand': 'f',
-    'Nightmare Gauntlets': 'f',
-    'Grifolic Orb': 'icon',
-    'Royal Cape': 'icon',
-    'Razorback Gauntlets': 'icon',
-    'Vital Spark': 'icon',
-    'Dragon Rider Helm': 'icon',
-    'Fremennik Equipment Patch': 'icon'
-  };
-
-  // Areas that require scrolling (more items than fit on one page).
-  // For these, only mark items as NOT obtained when -n IS found.
-  // Don't infer obtained from absence — item might be scrolled off screen.
-  var SCROLL_AREAS = {
-    'wilderness': true
-  };
+  // All items use dual detection: colored icon (.png) + empty slot (-n.png).
+  // Colored icon found → obtained. -n found (no color) → not obtained.
+  // Neither found → no update (handles scroll/off-screen naturally).
 
   // ── A1lib Resolution ──────────────────────────────────────────────
   function resolveLib() {
@@ -109,9 +89,8 @@
     return itemName.replace(/\s+/g, '_') + '-n';
   }
 
-  function reverseSlug(itemName, type) {
-    var base = itemName.replace(/\s+/g, '_');
-    return type === 'f' ? base + '-f' : base;
+  function colorSlug(itemName) {
+    return itemName.replace(/\s+/g, '_');
   }
 
   // ── Initialize: load all area + item images ───────────────────────
@@ -143,36 +122,28 @@
       }
     });
 
-    // Load item images
+    // Load item images (both colored icon and -n for every item)
     ULTIMATE_AREAS.forEach(function (area) {
       area.drops.forEach(function (drop) {
-        // Always load -n image
         var nSlug = itemSlug(drop.item);
+        var cSlug = colorSlug(drop.item);
         promises.push(loadRef(nSlug, 'images/ultimate/' + nSlug + '.png'));
-
-        // For unreliable items, also load the colored icon as fallback
-        if (REVERSE_DETECT[drop.item]) {
-          var rSlug = reverseSlug(drop.item, REVERSE_DETECT[drop.item]);
-          promises.push(loadRef(rSlug, 'images/ultimate/' + rSlug + '.png'));
-        }
+        promises.push(loadRef(cSlug, 'images/ultimate/' + cSlug + '.png'));
       });
     });
 
     return Promise.all(promises).then(function () {
       var areaCount = ULTIMATE_AREAS.filter(function (a) { return refs['area_' + a.id]; }).length;
-      var itemCount = 0;
-      var reverseCount = 0;
+      var nCount = 0;
+      var colorCount = 0;
       ULTIMATE_AREAS.forEach(function (area) {
         area.drops.forEach(function (drop) {
-          if (refs[itemSlug(drop.item)]) itemCount++;
-          if (REVERSE_DETECT[drop.item]) {
-            var rSlug = reverseSlug(drop.item, REVERSE_DETECT[drop.item]);
-            if (refs[rSlug]) reverseCount++;
-          }
+          if (refs[itemSlug(drop.item)]) nCount++;
+          if (refs[colorSlug(drop.item)]) colorCount++;
         });
       });
       console.log('[UltDetect] Loaded ' + areaCount + ' area images, ' +
-        itemCount + ' -n items, ' + reverseCount + ' reverse-detect fallbacks.');
+        nCount + ' -n items, ' + colorCount + ' colored icons.');
       initialized = true;
     });
   }
@@ -189,64 +160,33 @@
       // Check if this area's identifier is visible on screen
       if (!imageFound('area_' + area.id)) return;
 
-      var isScrollArea = !!SCROLL_AREAS[area.id];
-
-      // Area is visible — check each item
+      // Area is visible — check each item with dual detection
       area.drops.forEach(function (drop) {
         var nSlug = itemSlug(drop.item);
+        var cSlug = colorSlug(drop.item);
+        var colorFound = refs[cSlug] && imageFound(cSlug);
+        var nFound = refs[nSlug] && imageFound(nSlug);
 
-        // ── REVERSE_DETECT items: dual detection ──
-        if (REVERSE_DETECT[drop.item]) {
-          var rSlug = reverseSlug(drop.item, REVERSE_DETECT[drop.item]);
-          var colorFound = refs[rSlug] && imageFound(rSlug);
-          var nFound = refs[nSlug] && imageFound(nSlug);
-
-          if (colorFound && !nFound) {
-            // Colored icon visible, empty slot gone → obtained
-            changes[drop.item] = { v: true, method: 'color icon found, -n absent' };
-            hasChanges = true;
-          } else if (!colorFound && nFound) {
-            // Empty slot visible, no colored icon → not obtained
-            changes[drop.item] = { v: false, method: '-n found (empty slot visible)' };
-            hasChanges = true;
-          } else if (colorFound && nFound) {
-            // Both visible → contradictory, flash for manual review
-            changes[drop.item] = { v: 'conflict', reason: 'both found' };
-            hasChanges = true;
-          } else {
-            // Neither visible → ambiguous, flash for manual review
-            changes[drop.item] = { v: 'conflict', reason: 'both not found' };
-            hasChanges = true;
-          }
-          return;
-        }
-
-        // ── Normal items: -n only detection ──
-        if (refs[nSlug] && imageFound(nSlug)) {
+        if (colorFound) {
+          // Colored icon visible → item obtained (wins even if -n false-positives)
+          changes[drop.item] = { v: true, method: 'color icon found' };
+          hasChanges = true;
+        } else if (nFound) {
+          // Empty slot visible, no colored icon → item not obtained
           changes[drop.item] = { v: false, method: '-n found' };
           hasChanges = true;
-          return;
         }
-
-        if (refs[nSlug] && !isScrollArea) {
-          changes[drop.item] = { v: true, method: '-n not found (no scroll)' };
-          hasChanges = true;
-        }
-        // If scroll area and -n not found: don't update (might be off-screen)
+        // Neither found → item off-screen or area not focused; no update
       });
     });
 
     if (hasChanges) {
       var checked = [];
       var unchecked = [];
-      var flashed = [];
       var cbChanges = {};
       Object.keys(changes).forEach(function (item) {
         var c = changes[item];
-        if (c.v === 'conflict') {
-          flashed.push(item + ' (' + c.reason + ')');
-          cbChanges[item] = 'conflict';
-        } else if (c.v) {
+        if (c.v) {
           checked.push(item + ' [' + c.method + ']');
           cbChanges[item] = true;
         } else {
@@ -256,7 +196,6 @@
       });
       if (checked.length) console.log('[UltDetect] Checked: ' + checked.join(', '));
       if (unchecked.length) console.log('[UltDetect] Unchecked: ' + unchecked.join(', '));
-      if (flashed.length) console.log('[UltDetect] Flash: ' + flashed.join(', '));
       if (onUpdateCb) onUpdateCb(cbChanges);
     }
   }

@@ -2150,12 +2150,7 @@
         UltimateDetector.init({
           onUpdate: function (changes) {
             var changed = false;
-            var conflicts = [];
             Object.keys(changes).forEach(function (item) {
-              if (changes[item] === 'conflict') {
-                conflicts.push(item);
-                return;
-              }
               if (changes[item]) {
                 if (!state.ultimateObtained[item]) {
                   state.ultimateObtained[item] = true;
@@ -2171,22 +2166,6 @@
             if (changed) {
               saveState();
               renderUltimateTab();
-            }
-            // Flash gold border on conflict items for manual review
-            if (conflicts.length) {
-              conflicts.forEach(function (item) {
-                var checkEls = document.querySelectorAll('.ultimate-card-check');
-                checkEls.forEach(function (el) {
-                  if (el.getAttribute('data-item') === item) {
-                    var card = el.closest('.ultimate-card');
-                    if (card) {
-                      card.classList.remove('detect-conflict');
-                      void card.offsetWidth; // force reflow to restart animation
-                      card.classList.add('detect-conflict');
-                    }
-                  }
-                });
-              });
             }
           }
         }).then(function () {
