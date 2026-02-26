@@ -59,3 +59,4 @@ This project is hosted on GitHub Pages and auto-deploys on push to `main`.
 - Data by the community (mionee, roarroar, Joshua B)
 - Ultimate Slayer spreadsheet by Gooch Era
 - Built with vanilla JS, HTML5 Canvas, and the Alt1 Toolkit API
+- Extensive testing (Paly, Mephie)
