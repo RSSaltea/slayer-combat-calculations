@@ -1832,7 +1832,6 @@
 
     btn.addEventListener('click', function (e) {
       e.stopPropagation();
-      // Close export menu if open
       var exportMenu = document.getElementById('ultimate-export-menu');
       if (exportMenu) exportMenu.classList.remove('open');
       menu.classList.toggle('open');
@@ -1843,24 +1842,27 @@
     });
 
     menu.addEventListener('click', function (e) {
-      var opt = e.target.closest('.ultimate-uncheck-option');
-      if (!opt) return;
-      menu.classList.remove('open');
-      var mode = opt.dataset.mode;
+      e.stopPropagation();
+    });
 
-      if (mode === 'all') {
-        if (!confirm('Uncheck all items across every area?')) return;
-        state.ultimateObtained = {};
-      } else {
-        var area = ULTIMATE_AREAS.find(function (a) { return a.id === state.ultimateActiveArea; });
-        if (!area) return;
-        if (!confirm('Uncheck all items in ' + area.title + '?')) return;
-        area.drops.forEach(function (drop) {
-          delete state.ultimateObtained[drop.item];
-        });
-      }
-      saveState();
-      renderUltimateTab();
+    var options = menu.querySelectorAll('.ultimate-uncheck-option');
+    options.forEach(function (opt) {
+      opt.addEventListener('click', function () {
+        menu.classList.remove('open');
+        var mode = opt.dataset.mode;
+
+        if (mode === 'all') {
+          state.ultimateObtained = {};
+        } else {
+          var area = ULTIMATE_AREAS.find(function (a) { return a.id === state.ultimateActiveArea; });
+          if (!area) return;
+          area.drops.forEach(function (drop) {
+            delete state.ultimateObtained[drop.item];
+          });
+        }
+        saveState();
+        renderUltimateTab();
+      });
     });
   }
 
