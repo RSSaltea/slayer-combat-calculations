@@ -1720,9 +1720,14 @@ body {
   margin-right: 0.5rem;
 }
 
-.ultimate-check-btn:hover {
+.ultimate-check-btn:hover:not(:disabled) {
   border-color: var(--green);
   color: var(--green);
+}
+
+.ultimate-check-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .ultimate-check-btn.active {

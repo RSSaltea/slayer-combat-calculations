@@ -2141,6 +2141,8 @@
     var btn = checkBtn;
 
     btn.style.display = '';
+    btn.disabled = true;
+    btn.title = 'Waiting for Alt1 fixes';
 
     // Shared update handler used by both UltimateDetector and SkipDetector
     function handleDetectorUpdate(changes) {
