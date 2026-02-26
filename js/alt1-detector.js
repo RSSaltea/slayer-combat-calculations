@@ -210,7 +210,29 @@
       area.drops.forEach(function (drop) {
         var nSlug = itemSlug(drop.item);
 
-        // Step 1: Try -n detection (empty slot image)
+        // ── REVERSE_DETECT items: dual detection ──
+        if (REVERSE_DETECT[drop.item]) {
+          var rSlug = reverseSlug(drop.item, REVERSE_DETECT[drop.item]);
+          var colorFound = refs[rSlug] && imageFound(rSlug);
+          var nFound = refs[nSlug] && imageFound(nSlug);
+
+          if (colorFound && !nFound) {
+            // Colored icon alone → obtained
+            changes[drop.item] = true;
+            hasChanges = true;
+          } else if (!colorFound && nFound) {
+            // -n alone → obtained
+            changes[drop.item] = true;
+            hasChanges = true;
+          } else {
+            // Both found OR both not found → ambiguous, flash for manual review
+            changes[drop.item] = 'conflict';
+            hasChanges = true;
+          }
+          return;
+        }
+
+        // ── Normal items: -n only detection ──
         if (refs[nSlug] && imageFound(nSlug)) {
           // Empty slot found on screen — item NOT obtained
           changes[drop.item] = false;
@@ -218,21 +240,8 @@
           return;
         }
 
-        // Step 2: For items with unreliable -n, check colored icon fallback
-        if (REVERSE_DETECT[drop.item]) {
-          var rSlug = reverseSlug(drop.item, REVERSE_DETECT[drop.item]);
-          if (refs[rSlug] && imageFound(rSlug)) {
-            // Colored icon found — item IS obtained
-            changes[drop.item] = true;
-            hasChanges = true;
-          }
-          // Neither found — leave state unchanged (no false positives)
-          return;
-        }
-
-        // Step 3: Normal -n only item, -n not found
         if (refs[nSlug] && !isScrollArea) {
-          // Area doesn't scroll — item IS obtained
+          // -n not found and area doesn't scroll — item IS obtained
           changes[drop.item] = true;
           hasChanges = true;
         }
