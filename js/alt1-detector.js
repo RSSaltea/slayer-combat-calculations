@@ -195,7 +195,9 @@
     if (!captureScreen()) return;
 
     var changes = {};
-    var hasChanges = false;
+    var checked = [];
+    var unchecked = [];
+    var flashed = [];
 
     ULTIMATE_AREAS.forEach(function (area) {
       // Check if this area's identifier is visible on screen
@@ -205,14 +207,19 @@
 
       // Area is visible — check each item
       area.drops.forEach(function (drop) {
-        if (SKIP_DETECT[drop.item]) return; // skip — manual toggle
+        if (SKIP_DETECT[drop.item]) {
+          // Unreliable detection — flash to prompt manual check
+          changes[drop.item] = { v: 'flash', reason: 'manual-only item' };
+          flashed.push(drop.item);
+          return;
+        }
 
         if (REVERSE_DETECT[drop.item]) {
           // Only check -f (found) image — if found, mark obtained
           var fSlug = itemSlugFound(drop.item);
           if (refs[fSlug] && imageFound(fSlug)) {
-            changes[drop.item] = true;
-            hasChanges = true;
+            changes[drop.item] = { v: true, method: '-f found' };
+            checked.push(drop.item);
           }
           // Not found — leave state unchanged (manual toggle)
         } else {
@@ -222,19 +229,23 @@
 
           if (imageFound(slug)) {
             // Empty slot found on screen — item NOT obtained
-            changes[drop.item] = false;
-            hasChanges = true;
+            changes[drop.item] = { v: false, method: '-n found' };
+            unchecked.push(drop.item);
           } else if (!isScrollArea) {
             // Empty slot NOT found, and area doesn't scroll — item IS obtained
-            changes[drop.item] = true;
-            hasChanges = true;
+            changes[drop.item] = { v: true, method: '-n not found (no scroll)' };
+            checked.push(drop.item);
           }
           // If scroll area and -n not found: don't update (might be off-screen)
         }
       });
     });
 
-    if (hasChanges && onUpdateCb) {
+    if (checked.length) console.log('[UltDetect] Checked: ' + checked.join(', '));
+    if (unchecked.length) console.log('[UltDetect] Unchecked: ' + unchecked.join(', '));
+    if (flashed.length) console.log('[UltDetect] Flash: ' + flashed.join(', '));
+
+    if (Object.keys(changes).length && onUpdateCb) {
       onUpdateCb(changes);
     }
   }

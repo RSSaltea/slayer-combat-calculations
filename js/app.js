@@ -1763,6 +1763,7 @@
 
       var card = document.createElement('div');
       card.className = 'ultimate-card' + (isObtained ? ' obtained' : '') + (isExpanded ? ' expanded' : '');
+      card.dataset.item = drop.item;
 
       var rateDisplay = drop.rate || '\u2014';
       var escapedItem = drop.item.replace(/"/g, '&quot;');
@@ -2150,13 +2151,18 @@
         UltimateDetector.init({
           onUpdate: function (changes) {
             var changed = false;
+            var conflicts = [];
             Object.keys(changes).forEach(function (item) {
-              if (changes[item]) {
+              var entry = changes[item];
+              var v = (entry && typeof entry === 'object') ? entry.v : entry;
+              if (v === 'flash') {
+                conflicts.push(item);
+              } else if (v === true) {
                 if (!state.ultimateObtained[item]) {
                   state.ultimateObtained[item] = true;
                   changed = true;
                 }
-              } else {
+              } else if (v === false) {
                 if (state.ultimateObtained[item]) {
                   delete state.ultimateObtained[item];
                   changed = true;
@@ -2166,6 +2172,19 @@
             if (changed) {
               saveState();
               renderUltimateTab();
+            }
+            // Gold flash for manual-only items (SKIP_DETECT) when area is visible
+            if (conflicts.length) {
+              conflicts.forEach(function (item) {
+                var card = document.querySelector('.ultimate-card[data-item="' + CSS.escape(item) + '"]');
+                if (!card) return;
+                card.classList.remove('detect-conflict');
+                void card.offsetWidth; // force reflow to restart animation
+                card.classList.add('detect-conflict');
+                card.addEventListener('animationend', function () {
+                  card.classList.remove('detect-conflict');
+                }, { once: true });
+              });
             }
           }
         }).then(function () {
