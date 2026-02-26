@@ -217,15 +217,19 @@
           var nFound = refs[nSlug] && imageFound(nSlug);
 
           if (colorFound && !nFound) {
-            changes[drop.item] = { v: true, method: 'color icon only' };
+            // Colored icon visible, empty slot gone → obtained
+            changes[drop.item] = { v: true, method: 'color icon found, -n absent' };
             hasChanges = true;
           } else if (!colorFound && nFound) {
-            changes[drop.item] = { v: true, method: '-n only' };
+            // Empty slot visible, no colored icon → not obtained
+            changes[drop.item] = { v: false, method: '-n found (empty slot visible)' };
             hasChanges = true;
           } else if (colorFound && nFound) {
+            // Both visible → contradictory, flash for manual review
             changes[drop.item] = { v: 'conflict', reason: 'both found' };
             hasChanges = true;
           } else {
+            // Neither visible → ambiguous, flash for manual review
             changes[drop.item] = { v: 'conflict', reason: 'both not found' };
             hasChanges = true;
           }
