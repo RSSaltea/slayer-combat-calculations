@@ -1,5 +1,5 @@
 // GP per kill data - auto-updated from Google Sheets
-// Last updated: 2026-03-29 03:24 UTC
+// Last updated: 2026-03-29 13:12 UTC
 // onTask = on-task GP/kill, offTask = off-task GP/kill, binding = binding contracts GP/kill, tetra = tetra contracts GP/kill
 const GP_PER_KILL = {
   "Abyssal Beasts": { onTask: 20243.9, offTask: 20053.73, binding: 0, tetra: 0 },
