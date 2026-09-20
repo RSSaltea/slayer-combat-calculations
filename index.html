@@ -9,85 +9,144 @@
   <script src="https://www.unpkg.com/alt1/dist/base/index.js"></script>
 </head>
 <body>
+  <a class="skip-link" href="#main-content">Skip to content</a>
 
   <!-- Header -->
   <header class="site-header">
     <h1>Slayer & Combat Calculations</h1>
+    <p class="site-subtitle">Plan your Slayer tasks, optimise your list, and track Ultimate Slayer progress.</p>
     <span class="version">v2.3.0</span>
+    <span id="app-status" class="app-status" role="status" aria-live="polite"></span>
   </header>
 
   <!-- Tab Navigation -->
-  <nav class="tab-nav">
-    <button class="tab-btn active" data-tab="tab-home">Home</button>
-    <button class="tab-btn" data-tab="tab-tasks">Slayer Tasks</button>
-    <button class="tab-btn" data-tab="tab-prefblock">Prefer / Block</button>
-    <button class="tab-btn" data-tab="tab-ultimate">Ultimate Slayer</button>
-    <button class="tab-btn" data-tab="tab-goals">Goals</button>
-    <button class="tab-btn" data-tab="tab-changelog">Changelog / To-Do</button>
+  <nav class="tab-nav" aria-label="Calculator sections" role="tablist">
+    <button id="nav-home" class="tab-btn active" data-tab="tab-home" role="tab" aria-selected="true" aria-controls="tab-home">Dashboard</button>
+    <button id="nav-tasks" class="tab-btn" data-tab="tab-tasks" role="tab" aria-selected="false" aria-controls="tab-tasks" tabindex="-1">Slayer Tasks</button>
+    <button id="nav-prefblock" class="tab-btn" data-tab="tab-prefblock" role="tab" aria-selected="false" aria-controls="tab-prefblock" tabindex="-1">Prefer / Block</button>
+    <button id="nav-ultimate" class="tab-btn" data-tab="tab-ultimate" role="tab" aria-selected="false" aria-controls="tab-ultimate" tabindex="-1">Ultimate Slayer</button>
+    <button id="nav-goals" class="tab-btn" data-tab="tab-goals" role="tab" aria-selected="false" aria-controls="tab-goals" tabindex="-1">Goals</button>
+    <button id="nav-changelog" class="tab-btn" data-tab="tab-changelog" role="tab" aria-selected="false" aria-controls="tab-changelog" tabindex="-1">Updates</button>
   </nav>
 
   <!-- Main Content -->
-  <main class="main-content">
+  <main id="main-content" class="main-content">
 
     <!-- HOME TAB -->
-    <div id="tab-home" class="tab-panel active">
+    <div id="tab-home" class="tab-panel active" role="tabpanel" aria-labelledby="nav-home" tabindex="0">
 
-      <h2 class="section-title">Player Lookup</h2>
+      <section class="dashboard-hero" aria-labelledby="dashboard-title">
+        <div>
+          <p class="eyebrow">Your Slayer run</p>
+          <h2 id="dashboard-title">Dashboard</h2>
+          <p>Your task plan and collection progress in one place.</p>
+        </div>
+        <div class="dashboard-layout" aria-live="polite">
+          <section class="dashboard-task-plan">
+            <header><div><p class="eyebrow">Slayer tasks</p><h3>Your task list</h3></div><button type="button" class="dashboard-list-action" data-dashboard-tab="tab-prefblock">Edit list</button></header>
+            <div class="dashboard-lists">
+              <section class="dashboard-list-panel prefer-panel">
+                <h4>Prefer</h4>
+                <div id="dashboard-prefer-list" class="dashboard-task-list"></div>
+              </section>
+              <section class="dashboard-list-panel block-panel">
+                <h4>Block</h4>
+                <div id="dashboard-block-list" class="dashboard-task-list"></div>
+              </section>
+            </div>
+          </section>
+          <section class="dashboard-ultimate-panel">
+            <p class="eyebrow">Collection log</p>
+            <h3>Ultimate Slayer</h3>
+            <div id="dashboard-ultimate-progress"></div>
+            <button type="button" class="dashboard-card-action" data-dashboard-tab="tab-ultimate">Track progress →</button>
+          </section>
+        </div>
+      </section>
+
+      <details id="setup-panel" class="home-accordion setup-panel">
+        <summary>
+          <span>Setup &amp; settings</span>
+          <small>Player stats, boosts, and unlocks</small>
+        </summary>
+        <div class="accordion-body">
+      <section id="setup-welcome" class="welcome-card" aria-labelledby="welcome-title">
+        <div>
+          <p class="eyebrow">Start here</p>
+          <h2 id="welcome-title">Set up once, then use the view you need.</h2>
+          <p>Your settings stay on this device. Player lookup is optional—manual stats work just as well.</p>
+        </div>
+        <div class="quick-start-actions">
+          <button class="quick-start-btn" data-go-tab="tab-home" data-go-target="player-name"><span>1</span><strong>Add your stats</strong><small>Lookup or enter them manually</small></button>
+          <button class="quick-start-btn" data-go-tab="tab-tasks"><span>2</span><strong>Compare tasks</strong><small>Sort by XP, GP, or task time</small></button>
+          <button class="quick-start-btn" data-go-tab="tab-prefblock"><span>3</span><strong>Build your list</strong><small>Auto-fill or pin your choices</small></button>
+        </div>
+      </section>
+
+      <h2 class="section-title">1. Your character <span class="section-hint">Optional, but it filters locked tasks and powers Goals.</span></h2>
       <div class="card" style="margin-bottom:1.5rem;">
         <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">
-          <input type="text" id="player-name" placeholder="Enter RuneScape name..." class="player-input">
+          <input type="text" id="player-name" placeholder="Enter RuneScape name..." class="player-input" aria-label="RuneScape player name" autocomplete="off">
           <button id="lookup-btn" class="lookup-btn">Look Up</button>
-          <span id="lookup-status" style="font-size:0.8rem;color:var(--text-muted);"></span>
+          <button id="manual-stats-btn" class="secondary-btn" type="button">Enter stats manually</button>
+          <span id="lookup-status" role="status" aria-live="polite" style="font-size:0.8rem;color:var(--text-muted);"></span>
         </div>
+        <div id="manual-stats" class="manual-stats" hidden></div>
         <div id="player-stats" style="margin-top:1rem;display:none;"></div>
         <div id="quest-status" style="margin-top:0.75rem;display:none;"></div>
+        <div id="player-summary" class="player-summary"></div>
       </div>
-
-      <h2 class="section-title">Toggles / Boosts</h2>
-      <div id="boosts-grid" class="boosts-grid"></div>
 
       <div id="multiplier-bar" class="multiplier-bar"></div>
 
-      <h2 class="section-title">Persuade Unlocks</h2>
-      <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:0.75rem;">
-        Toggle tasks you've purchased with 50 Slayer reward points. Locked persuade tasks are excluded from calculations.
-      </p>
-      <div id="persuade-toggles" class="boosts-grid"></div>
+      <section class="setup-subsection">
+          <h2 class="accordion-section-title">Active boosts <span class="section-hint">Only enable effects currently active in-game.</span></h2>
+          <div id="boosts-grid" class="boosts-grid"></div>
 
-      <h2 class="section-title">Overview</h2>
-      <div id="stats-bar" class="stats-bar"></div>
+          <h2 class="accordion-section-title">Persuade unlocks</h2>
+          <p class="accordion-copy">Toggle tasks you've purchased with 50 Slayer reward points. Locked persuade tasks are excluded from calculations.</p>
+          <div id="persuade-toggles" class="boosts-grid"></div>
+      </section>
+        </div>
+      </details>
 
-      <div class="info-grid">
-        <div class="info-card">
-          <h3>How to Use</h3>
-          <p>Select your active XP boosts above. The site will automatically recalculate all XP and GP rates across every tab. Your settings are saved locally in your browser.</p>
+      <details class="home-accordion">
+        <summary>
+          <span>Help and data</span>
+          <small>How rates, KPH, and saved settings work</small>
+        </summary>
+        <div class="accordion-body info-grid">
+          <div class="info-card">
+            <h3>How to Use</h3>
+            <p>Select your active XP boosts in Calculator settings. The site recalculates XP and GP rates across every tab. Your settings are saved locally in your browser.</p>
+          </div>
+          <div class="info-card">
+            <h3>Editable KPH</h3>
+            <p>On the Slayer Tasks tab, click any KPH value to use your own kills/hour data. Custom values are saved locally and persist between sessions.</p>
+          </div>
+          <div class="info-card">
+            <h3>Data Sources</h3>
+            <p>Kill rates are community supplied. If you have specific KPH videos that match or exceed current data, contact <strong>.saltea</strong> on Discord.</p>
+          </div>
+          <div class="info-card">
+            <h3>Feedback</h3>
+            <p>For suggestions or issues, message <strong>.saltea</strong> on Discord.</p>
+          </div>
         </div>
-        <div class="info-card">
-          <h3>Editable KPH</h3>
-          <p>On the Slayer Tasks tab, click any KPH value to edit it with your own kills/hour data. Custom values are saved locally and persist between sessions.</p>
-        </div>
-        <div class="info-card">
-          <h3>Data Sources</h3>
-          <p>Kill rates provided by the community. If you have specific KPH videos that match or exceed current data, contact <strong>.saltea</strong> on Discord so we can include it in the data.</p>
-        </div>
-        <div class="info-card">
-          <h3>Feedback</h3>
-          <p>For suggestions or issues, message <strong>.saltea</strong> on Discord.</p>
-        </div>
-      </div>
+      </details>
     </div>
 
     <!-- SLAYER TASKS TAB (merged Experience + Filter) -->
-    <div id="tab-tasks" class="tab-panel">
+    <div id="tab-tasks" class="tab-panel" role="tabpanel" aria-labelledby="nav-tasks" tabindex="0">
 
-      <h2 class="section-title">Slayer Tasks</h2>
+      <h2 class="section-title">Best Slayer assignments</h2>
 
       <div class="table-controls">
         <div class="search-box">
-          <input type="text" id="task-search" placeholder="Search creatures...">
+          <input type="text" id="task-search" placeholder="Search assignments or creatures..." aria-label="Search Slayer assignments or creatures">
         </div>
         <div class="table-controls-right">
-          <label style="color:var(--text-muted);font-size:0.85rem;">Sort by:</label>
+          <label for="sort-select" class="control-label">Rank by</label>
           <select id="sort-select" class="focus-select">
             <option value="slayXpHr">Slay XP/Hr</option>
             <option value="combatXpHr">Combat XP/Hr</option>
@@ -97,11 +156,10 @@
             <option value="combatXpTask">Combat XP/Task</option>
             <option value="minsTask">Minutes/Task</option>
           </select>
-          <button id="toggle-task-view" class="toggle-clusters-btn">Group by Task</button>
-          <button id="toggle-clusters" class="toggle-clusters-btn active">Show Clusters</button>
-          <button id="toggle-blocked" class="toggle-clusters-btn">Show Blocked</button>
+          <button id="toggle-excluded" class="toggle-clusters-btn" aria-pressed="false">Show excluded</button>
         </div>
       </div>
+      <p id="task-action-status" class="table-status" role="status" aria-live="polite"></p>
 
       <div class="persuade-bar">
         <span class="persuade-bar-label">Persuade Unlocks:</span>
@@ -112,18 +170,17 @@
         <table class="data-table" id="tasks-table">
           <thead>
             <tr>
-              <th data-sort="name" style="text-align:left">Creature</th>
+              <th id="task-name-heading" data-sort="name" style="text-align:left">Assignment</th>
               <th data-sort="kph" class="kph-col">KPH</th>
               <th class="intro-col" title="Slayer Introspection: choose minimum or maximum task size">Amt</th>
-              <th data-sort="slayXpHr">Slay XP/Hr</th>
-              <th data-sort="combatXpHr">Combat XP/Hr</th>
-              <th data-sort="gpHr">GP/Hr</th>
-              <th data-sort="gpTask">GP/Task</th>
-              <th data-sort="slayXpTask">Slay XP/Task</th>
-              <th data-sort="combatXpTask">Combat XP/Task</th>
+              <th data-sort="slayXpHr" class="metric-slayer">Slay XP/Hr</th>
+              <th data-sort="combatXpHr" class="metric-combat">Combat XP/Hr</th>
+              <th data-sort="gpHr" class="metric-gp">GP/Hr</th>
+              <th data-sort="gpTask" class="metric-gp">GP/Task</th>
+              <th data-sort="slayXpTask" class="metric-slayer">Slay XP/Task</th>
+              <th data-sort="combatXpTask" class="metric-combat">Combat XP/Task</th>
               <th data-sort="minsTask">Mins/Task</th>
-              <th class="scrim-col" title="Per-monster Scrimshaw of Sacrifice (+50% XP, 0 GP)">Scrim</th>
-              <th class="skip-col" title="Skip this task with Slayer points (excluded from averages)">Skip</th>
+              <th class="skip-col" title="Extended block: spend Slayer points to skip this whole assignment">Extended block</th>
             </tr>
           </thead>
           <tbody id="tasks-table-body"></tbody>
@@ -132,12 +189,13 @@
     </div>
 
     <!-- PREFER / BLOCK TAB -->
-    <div id="tab-prefblock" class="tab-panel">
+    <div id="tab-prefblock" class="tab-panel" role="tabpanel" aria-labelledby="nav-prefblock" tabindex="0">
 
       <h2 class="section-title">Prefer / Block List</h2>
       <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:1rem;">
         Max 8 each. Manually pinned tasks (lock icon) stay when auto-fill changes. Use the <strong>Skip</strong> column on the Slayer Tasks tab to always skip a task with points (excluded from averages). Locked tasks are excluded from auto-fill.
       </p>
+      <p class="page-intro">Choose a metric to fill open slots automatically, then use + or − to keep the exceptions you care about.</p>
 
       <div class="pref-block-controls">
         <div class="auto-fill-group">
@@ -162,8 +220,8 @@
             <option value="slayXpTask">Worst Slay XP/Task</option>
           </select>
         </div>
-        <button id="reset-prefs" class="toggle-clusters-btn">Reset All</button>
-        <button id="prefblock-export-btn" class="toggle-clusters-btn">Export</button>
+        <button id="reset-prefs" class="toggle-clusters-btn">Restore defaults</button>
+        <button id="prefblock-export-btn" class="toggle-clusters-btn">Export image</button>
       </div>
 
       <div id="weighted-avg-bar" class="weighted-avg-bar"></div>
@@ -190,9 +248,10 @@
     </div>
 
     <!-- ULTIMATE SLAYER TAB -->
-    <div id="tab-ultimate" class="tab-panel">
+    <div id="tab-ultimate" class="tab-panel" role="tabpanel" aria-labelledby="nav-ultimate" tabindex="0">
 
       <h2 class="section-title">Ultimate Slayer</h2>
+      <p class="page-intro">Select an area, tick off drops as you get them, and open a card to see its source and rate. Progress is saved on this device.</p>
 
       <div id="ultimate-progress" class="ultimate-progress-bar"></div>
 
@@ -203,13 +262,13 @@
         <div class="ultimate-export-wrap">
           <a id="alt1-install-btn" class="alt1-install-btn" href="alt1://addapp/https://rssaltea.github.io/slayer-combat-calculations/appconfig.json" style="display:none">Add to Alt1</a>
           <button id="ultimate-check-btn" class="ultimate-check-btn" style="display:none">Check</button>
-          <button id="ultimate-uncheck-btn" class="ultimate-export-btn">Uncheck &#9662;</button>
-          <div id="ultimate-uncheck-menu" class="ultimate-export-menu">
+          <button id="ultimate-uncheck-btn" class="ultimate-export-btn" aria-expanded="false" aria-controls="ultimate-uncheck-menu">Uncheck &#9662;</button>
+          <div id="ultimate-uncheck-menu" class="ultimate-export-menu" role="menu">
             <button data-mode="area" class="ultimate-uncheck-option">Uncheck Area</button>
             <button data-mode="all" class="ultimate-uncheck-option">Uncheck All</button>
           </div>
-          <button id="ultimate-export-btn" class="ultimate-export-btn">Export &#9662;</button>
-          <div id="ultimate-export-menu" class="ultimate-export-menu">
+          <button id="ultimate-export-btn" class="ultimate-export-btn" aria-expanded="false" aria-controls="ultimate-export-menu">Export &#9662;</button>
+          <div id="ultimate-export-menu" class="ultimate-export-menu" role="menu">
             <button data-mode="area" class="ultimate-export-option">Export Area</button>
             <button data-mode="all" class="ultimate-export-option">Export All</button>
           </div>
@@ -223,13 +282,13 @@
     </div>
 
     <!-- GOALS TAB -->
-    <div id="tab-goals" class="tab-panel">
+    <div id="tab-goals" class="tab-panel" role="tabpanel" aria-labelledby="nav-goals" tabindex="0">
       <h2 class="section-title">Goals &mdash; XP Calculator</h2>
       <div id="goals-content"></div>
     </div>
 
     <!-- CHANGELOG TAB -->
-    <div id="tab-changelog" class="tab-panel">
+    <div id="tab-changelog" class="tab-panel" role="tabpanel" aria-labelledby="nav-changelog" tabindex="0">
 
       <h2 class="section-title">To-Do</h2>
       <div id="todo-list" class="todo-list"></div>

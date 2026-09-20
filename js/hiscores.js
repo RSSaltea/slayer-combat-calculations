@@ -53,29 +53,56 @@ const GOAL_SKILLS = [
   { id: 'slayer', name: 'Slayer', maxLevel: 120 },
 ];
 
-// CORS proxy fallbacks
-const CORS_PROXIES = [
-  'https://corsproxy.io/?url=',
-  'https://api.codetabs.com/v1/proxy?quest=',
-];
+// RuneScape's APIs do not allow browser cross-origin reads. GitHub Pages has no
+// server component, so requests go through this CORS-enabled relay instead.
+const CORS_RELAY = 'https://api.allorigins.win/get?url=';
+
+function isLocalDevelopment() {
+  return location.hostname === '127.0.0.1' || location.hostname === 'localhost';
+}
+
+function unwrapReaderContent(text) {
+  var marker = 'Markdown Content:';
+  var markerIndex = text.indexOf(marker);
+  return markerIndex === -1 ? text.trim() : text.slice(markerIndex + marker.length).trim();
+}
+
+async function fetchViaRelay(url, timeoutMs) {
+  var response = await fetch(CORS_RELAY + encodeURIComponent(url), {
+    signal: AbortSignal.timeout(timeoutMs || 12000),
+  });
+  if (!response.ok) throw new Error('The player-data relay is temporarily unavailable.');
+  var payload = await response.json();
+  if (typeof payload.contents !== 'string') throw new Error('The player-data relay returned an unexpected response.');
+  return payload.contents;
+}
 
 // ── Hiscores Fetch ─────────────────────────────────────────────────
 async function fetchHiscores(playerName) {
   const baseUrl = 'https://secure.runescape.com/m=hiscore/index_lite.ws?player=' + encodeURIComponent(playerName);
 
-  for (var i = -1; i < CORS_PROXIES.length; i++) {
-    try {
-      var proxy = i < 0 ? '' : CORS_PROXIES[i];
-      var url = proxy ? proxy + encodeURIComponent(baseUrl) : baseUrl;
-      var resp = await fetch(url, { signal: AbortSignal.timeout(8000) });
-      if (resp.ok) {
-        var text = await resp.text();
-        if (text.includes(',')) return parseHiscores(text);
-      }
-    } catch (e) { /* try next */ }
+  var text;
+  if (isLocalDevelopment()) {
+    var response = await fetch('/api/hiscores?player=' + encodeURIComponent(playerName), { signal: AbortSignal.timeout(12000) });
+    if (!response.ok) throw new Error('Could not fetch hiscores. Check the player name and try again.');
+    text = unwrapReaderContent(await response.text());
+  } else {
+    text = await fetchViaRelay(baseUrl);
   }
+  if (text.includes(',')) {
+    var skills = parseHiscores(normalizeHiscoresCsv(text));
+    if (skills.slayer) return skills;
+  }
+  throw new Error('No hiscore data was found for that player. Check the spelling and privacy settings.');
+}
 
-  throw new Error('Could not fetch hiscores. The RS3 API may be down or blocked by CORS.');
+// Reader relays sometimes collapse the source CSV's newlines into spaces.
+// The first 30 RS3 hiscore records (through Necromancy) are always rank,level,xp.
+function normalizeHiscoresCsv(csv) {
+  var lines = csv.trim().split(/\r?\n/);
+  if (lines.length >= 30) return csv;
+  var skillRows = csv.match(/-?\d+,-?\d+,-?\d+(?=\s|$)/g);
+  return skillRows && skillRows.length >= 30 ? skillRows.join('\n') : csv;
 }
 
 function parseHiscores(csv) {
@@ -101,21 +128,20 @@ function parseHiscores(csv) {
 async function fetchQuests(playerName) {
   var baseUrl = 'https://apps.runescape.com/runemetrics/quests?user=' + encodeURIComponent(playerName);
 
-  for (var i = -1; i < CORS_PROXIES.length; i++) {
-    try {
-      var proxy = i < 0 ? '' : CORS_PROXIES[i];
-      var url = proxy ? proxy + encodeURIComponent(baseUrl) : baseUrl;
-      var resp = await fetch(url, { signal: AbortSignal.timeout(8000) });
-      if (resp.ok) {
-        var data = await resp.json();
-        // API returns { quests: [...] } array
-        var quests = data.quests || data;
-        if (Array.isArray(quests)) {
-          return parseQuests(quests);
-        }
-      }
-    } catch (e) { /* try next */ }
-  }
+  try {
+    var text;
+    if (isLocalDevelopment()) {
+      var response = await fetch('/api/quests?user=' + encodeURIComponent(playerName), { signal: AbortSignal.timeout(5000) });
+      if (!response.ok) return null;
+      text = unwrapReaderContent(await response.text());
+    } else {
+      text = await fetchViaRelay(baseUrl, 5000);
+    }
+    var data = JSON.parse(text);
+    // API returns { quests: [...] } array
+    var quests = data.quests || data;
+    if (Array.isArray(quests)) return parseQuests(quests);
+  } catch (e) { /* Quest data is optional. */ }
 
   // Return null if we can't fetch quests (non-fatal)
   return null;
@@ -225,12 +251,127 @@ var DISPLAY_SKILLS = [
 function initPlayerLookup() {
   var btn = document.getElementById('lookup-btn');
   var nameInput = document.getElementById('player-name');
-  if (!btn || !nameInput) return;
+  var manualBtn = document.getElementById('manual-stats-btn');
+  if (!btn || !nameInput || !manualBtn) return;
 
   btn.addEventListener('click', doLookup);
+  manualBtn.addEventListener('click', toggleManualStats);
   nameInput.addEventListener('keydown', function (e) {
     if (e.key === 'Enter') doLookup();
   });
+  renderManualStats();
+  if (Object.keys(getSavedManualSkills()).length) applyManualStats(true);
+  else restorePlayerProfile();
+}
+
+function savePlayerProfile() {
+  if (!playerData || playerName === 'manual') return;
+  var quests = playerQuests ? {
+    completed: Array.from(playerQuests.completed),
+    started: Array.from(playerQuests.started),
+  } : null;
+  try {
+    localStorage.setItem('slayerCalcPlayerProfile', JSON.stringify({ name: playerName, skills: playerData, quests: quests }));
+  } catch (e) { /* Local storage is optional. */ }
+}
+
+function restorePlayerProfile() {
+  try {
+    var saved = JSON.parse(localStorage.getItem('slayerCalcPlayerProfile'));
+    if (!saved || !saved.skills || !saved.skills.slayer) return;
+    playerData = saved.skills;
+    playerName = saved.name || '';
+    playerQuests = saved.quests ? {
+      completed: new Set(saved.quests.completed || []),
+      started: new Set(saved.quests.started || []),
+    } : null;
+    var nameInput = document.getElementById('player-name');
+    if (nameInput) nameInput.value = playerName;
+    renderManualStats(playerData);
+    renderPlayerStats();
+    var status = document.getElementById('lookup-status');
+    status.textContent = 'Restored saved stats.';
+    status.style.color = 'var(--text-muted)';
+    if (typeof window.onPlayerLookup === 'function') window.onPlayerLookup(playerData, playerQuests);
+  } catch (e) { /* Ignore incomplete or old saved profiles. */ }
+}
+
+function renderPlayerStats() {
+  var statsDiv = document.getElementById('player-stats');
+  if (!statsDiv || !playerData) return;
+  var html = '<div class="player-stats-grid">';
+  for (var i = 0; i < DISPLAY_SKILLS.length; i++) {
+    var skill = DISPLAY_SKILLS[i];
+    var data = playerData[skill.id];
+    if (!data) continue;
+    var img = (typeof IMAGES !== 'undefined' && IMAGES[skill.name])
+      ? '<img src="' + IMAGES[skill.name] + '" class="skill-icon" alt="">'
+      : '';
+    html += '<div class="player-stat-item">' + img + '<div><div class="stat-skill-name">' + skill.name + '</div><div class="stat-skill-level">Lv ' + data.level + '</div><div class="stat-skill-xp">' + data.xp.toLocaleString() + ' XP</div></div></div>';
+  }
+  statsDiv.innerHTML = html + '</div>';
+  statsDiv.style.display = 'block';
+}
+
+function getSavedManualSkills() {
+  try { return JSON.parse(localStorage.getItem('slayerCalcManualSkills')) || {}; } catch (e) { return {}; }
+}
+
+function renderManualStats(values) {
+  var container = document.getElementById('manual-stats');
+  if (!container) return;
+  var saved = values || ((playerData && playerName !== 'manual') ? playerData : getSavedManualSkills());
+  var html = '<p>Use this when the player lookup is unavailable. Enter a level, XP, or both; these values are saved in this browser and update task locks and the Goals tab.</p>' +
+    '<div class="manual-stats-grid">';
+  DISPLAY_SKILLS.forEach(function (skill) {
+    var data = saved[skill.id] || {};
+    html += '<div class="manual-stat-row"><label for="manual-' + skill.id + '-level">' + skill.name + '</label>' +
+      '<input id="manual-' + skill.id + '-level" class="player-input" type="number" min="1" max="120" placeholder="Level" value="' + (data.level || '') + '">' +
+      '<input id="manual-' + skill.id + '-xp" class="player-input" type="number" min="0" max="200000000" placeholder="XP" value="' + (data.xp || '') + '"></div>';
+  });
+  html += '</div><div class="manual-stats-actions"><button id="save-manual-stats" class="lookup-btn" type="button">Use manual stats</button><button id="clear-manual-stats" class="secondary-btn" type="button">Clear</button></div>';
+  container.innerHTML = html;
+  document.getElementById('save-manual-stats').addEventListener('click', applyManualStats);
+  document.getElementById('clear-manual-stats').addEventListener('click', clearManualStats);
+}
+
+function toggleManualStats() {
+  var container = document.getElementById('manual-stats');
+  if (!container) return;
+  container.hidden = !container.hidden;
+  if (!container.hidden) renderManualStats();
+}
+
+function applyManualStats(silent) {
+  var skills = {};
+  DISPLAY_SKILLS.forEach(function (skill) {
+    var level = parseInt(document.getElementById('manual-' + skill.id + '-level').value, 10);
+    var xp = parseInt(document.getElementById('manual-' + skill.id + '-xp').value, 10);
+    if (!Number.isFinite(xp) && Number.isFinite(level)) xp = xpForLevel(level);
+    if (!Number.isFinite(level) && Number.isFinite(xp)) level = levelForXp(xp);
+    skills[skill.id] = { rank: -1, level: Math.min(120, Math.max(1, level || 1)), xp: Math.min(200000000, Math.max(0, xp || 0)) };
+  });
+  localStorage.setItem('slayerCalcManualSkills', JSON.stringify(skills));
+  localStorage.removeItem('slayerCalcPlayerProfile');
+  playerData = skills;
+  playerQuests = null;
+  playerName = 'manual';
+  var status = document.getElementById('lookup-status');
+  status.textContent = silent ? 'Restored manual stats.' : 'Using manual stats.';
+  status.style.color = 'var(--green)';
+  document.getElementById('player-stats').style.display = 'none';
+  if (typeof window.onPlayerLookup === 'function') window.onPlayerLookup(playerData, playerQuests);
+}
+
+function clearManualStats() {
+  localStorage.removeItem('slayerCalcManualSkills');
+  playerData = null;
+  playerQuests = null;
+  var status = document.getElementById('lookup-status');
+  status.textContent = 'Manual stats cleared.';
+  status.style.color = 'var(--text-muted)';
+  if (typeof window.onPlayerLookup === 'function') window.onPlayerLookup(null, null);
+  renderManualStats();
 }
 
 // ── Goals Tab UI ───────────────────────────────────────────────────
@@ -241,6 +382,7 @@ function initGoalsTab() {
   container.innerHTML =
     '<div class="card" style="margin-bottom:1.5rem;">' +
       '<h3 class="section-title" style="margin-bottom:1rem;">Goal Calculator</h3>' +
+      '<p class="page-intro">Choose the skills and target you want. Your best currently available task is used for the time estimate.</p>' +
       '<div class="goal-controls">' +
         '<div class="goal-row">' +
           '<label>Skills:</label>' +
@@ -271,6 +413,14 @@ function initGoalsTab() {
   });
 
   document.getElementById('calc-btn').addEventListener('click', doCalculation);
+  document.getElementById('goal-type').addEventListener('change', function (e) {
+    var input = document.getElementById('goal-value');
+    var isLevel = e.target.value === 'level';
+    input.min = '1';
+    input.max = isLevel ? '120' : '200000000';
+    input.placeholder = isLevel ? '99' : '200000000';
+    if (isLevel && parseInt(input.value, 10) > 120) input.value = '99';
+  });
 }
 
 async function doLookup() {
@@ -279,6 +429,8 @@ async function doLookup() {
   var statsDiv = document.getElementById('player-stats');
   var questDiv = document.getElementById('quest-status');
   var name = nameInput.value.trim();
+  var previousPlayerData = playerData;
+  var previousPlayerQuests = playerQuests;
 
   if (!name) {
     status.textContent = 'Please enter a player name.';
@@ -302,39 +454,25 @@ async function doLookup() {
     if (results[0].status === 'fulfilled') {
       playerData = results[0].value;
       playerName = name;
+      localStorage.removeItem('slayerCalcManualSkills');
+      // Keep the manual form useful as an editable copy of the lookup result.
+      renderManualStats(playerData);
       status.textContent = 'Found!';
       status.style.color = 'var(--green)';
 
-      var html = '<div class="player-stats-grid">';
-      for (var i = 0; i < DISPLAY_SKILLS.length; i++) {
-        var skill = DISPLAY_SKILLS[i];
-        var data = playerData[skill.id];
-        if (data) {
-          var img = (typeof IMAGES !== 'undefined' && IMAGES[skill.name])
-            ? '<img src="' + IMAGES[skill.name] + '" class="skill-icon" alt="">'
-            : '';
-          html +=
-            '<div class="player-stat-item">' +
-              img +
-              '<div>' +
-                '<div class="stat-skill-name">' + skill.name + '</div>' +
-                '<div class="stat-skill-level">Lv ' + data.level + '</div>' +
-                '<div class="stat-skill-xp">' + data.xp.toLocaleString() + ' XP</div>' +
-              '</div>' +
-            '</div>';
-        }
-      }
-      html += '</div>';
-      statsDiv.innerHTML = html;
-      statsDiv.style.display = 'block';
+      renderPlayerStats();
     } else {
-      status.textContent = results[0].reason ? results[0].reason.message : 'Failed to fetch hiscores.';
+      status.textContent = (results[0].reason ? results[0].reason.message : 'Failed to fetch hiscores.') + (previousPlayerData ? ' Keeping your saved stats.' : '');
       status.style.color = 'var(--red)';
-      playerData = null;
+      playerData = previousPlayerData;
+      playerQuests = previousPlayerQuests;
+      if (playerData) renderPlayerStats();
+      var manualContainer = document.getElementById('manual-stats');
+      if (manualContainer) manualContainer.hidden = false;
     }
 
     // Quests
-    if (results[1].status === 'fulfilled' && results[1].value) {
+    if (results[0].status === 'fulfilled' && results[1].status === 'fulfilled' && results[1].value) {
       playerQuests = results[1].value;
       if (playerQuests.completed.size === 0) {
         // RuneMetrics is private — assume all quests completed
@@ -350,7 +488,7 @@ async function doLookup() {
           '</span>';
       }
       questDiv.style.display = 'block';
-    } else {
+    } else if (results[0].status === 'fulfilled') {
       playerQuests = null;
       questDiv.innerHTML = '<span style="color:var(--text-muted);font-size:0.8rem;">Quest data unavailable</span>';
       questDiv.style.display = 'block';
@@ -360,6 +498,7 @@ async function doLookup() {
     if (typeof window.onPlayerLookup === 'function') {
       window.onPlayerLookup(playerData, playerQuests);
     }
+    savePlayerProfile();
 
   } catch (err) {
     status.textContent = err.message;
@@ -387,17 +526,31 @@ function doCalculation() {
     resultsDiv.innerHTML = '<p style="color:var(--red);">Level must be between 1 and 120.</p>';
     return;
   }
+  if (goalType === 'xp' && (goalValue < 1 || goalValue > 200000000)) {
+    resultsDiv.innerHTML = '<p style="color:var(--red);">XP must be between 1 and 200,000,000.</p>';
+    return;
+  }
 
   var slayerMult = typeof getSlayerMult === 'function' ? getSlayerMult() : 1;
   var combatMult = typeof getCombatMult === 'function' ? getCombatMult() : 1;
 
-  // Find best XP/hr from unlocked monsters only
+  // Use the application calculation so goals honour custom KPH, boosts, and per-task scrimshaws.
   var bestSlayXpHr = 0;
   var bestCombatXpHr = 0;
   var bestMonsterSlay = '';
   var bestMonsterCombat = '';
 
-  if (typeof MONSTERS !== 'undefined') {
+  if (typeof window.getGoalBestRates === 'function') {
+    var bestRates = window.getGoalBestRates();
+    if (bestRates.slayer) {
+      bestSlayXpHr = bestRates.slayer.xpPerHour;
+      bestMonsterSlay = bestRates.slayer.name;
+    }
+    if (bestRates.combat) {
+      bestCombatXpHr = bestRates.combat.xpPerHour;
+      bestMonsterCombat = bestRates.combat.name;
+    }
+  } else if (typeof MONSTERS !== 'undefined') {
     MONSTERS.filter(function (m) { return !m.cluster; }).forEach(function (m) {
       // Skip locked monsters
       var lockInfo = checkMonsterLocked(m.name, playerData, playerQuests, window._persuadeUnlocks);
@@ -431,6 +584,11 @@ function doCalculation() {
     } else {
       xpPerHour = bestCombatXpHr;
       usingMonster = bestMonsterCombat;
+    }
+
+    if (xpPerHour <= 0) {
+      html += '<div class="goal-result-card"><div class="goal-skill-name">' + skill.name + '</div><div class="goal-detail">No eligible task is available with the current unlocks and settings.</div></div>';
+      return;
     }
 
     var result = calculateGoal(currentXp, goalType, goalValue, xpPerHour);
