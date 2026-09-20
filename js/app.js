@@ -21,9 +21,9 @@
     sortCol: 'slayXpHr',
     sortAsc: false,
     search: '',
-    showClusters: true,
-    showBlocked: false,
-    taskView: false,
+    // Excluded means either blocked by the master or added to the extended
+    // block list (skip with points). Hidden by default so rankings stay useful.
+    showExcluded: false,
     expandedTasks: new Set(),
     prefer: new Set(DEFAULT_PREFER),
     block: new Set(DEFAULT_BLOCK),
@@ -33,7 +33,6 @@
     autoPreferMetric: 'slayXpHr',
     autoBlockMetric: 'slayXpHr',
     customKph: {},
-    scrimshawMonsters: new Set(),
     persuadeUnlocks: new Set(), // which persuade tasks the player has unlocked
     introspectionChoices: {},   // category_id -> 'min' | 'max' (Slayer Introspection)
     ultimateObtained: {},       // item name -> true (Ultimate Slayer tracker)
@@ -44,6 +43,17 @@
   // Player data from hiscores lookup (set via callback)
   var _playerSkills = null;
   var _playerQuests = null;
+  var saveStatusTimer = null;
+  var setupProfileState = null;
+
+  function announceSaved() {
+    var status = document.getElementById('app-status');
+    if (!status) return;
+    status.textContent = 'Saved locally';
+    status.classList.add('visible');
+    clearTimeout(saveStatusTimer);
+    saveStatusTimer = setTimeout(function () { status.classList.remove('visible'); }, 1600);
+  }
 
   // ── Persistence ────────────────────────────────────────────────────
   function loadState() {
@@ -60,12 +70,11 @@
         if (p.skip) state.skip = new Set(p.skip);
         if (p.autoPreferMetric !== undefined) state.autoPreferMetric = p.autoPreferMetric;
         if (p.autoBlockMetric !== undefined) state.autoBlockMetric = p.autoBlockMetric;
-        if (p.showClusters !== undefined) state.showClusters = p.showClusters;
-        if (p.showBlocked !== undefined) state.showBlocked = p.showBlocked;
-        if (p.taskView !== undefined) state.taskView = p.taskView;
+        if (p.showExcluded !== undefined) state.showExcluded = p.showExcluded;
+        else if (p.showBlocked !== undefined) state.showExcluded = p.showBlocked;
         if (p.sortCol) state.sortCol = p.sortCol;
+        if (typeof p.sortAsc === 'boolean') state.sortAsc = p.sortAsc;
         if (p.customKph) state.customKph = p.customKph;
-        if (p.scrimshawMonsters) state.scrimshawMonsters = new Set(p.scrimshawMonsters);
         if (p.persuadeUnlocks) state.persuadeUnlocks = new Set(p.persuadeUnlocks);
         if (p.introspectionChoices) state.introspectionChoices = p.introspectionChoices;
         if (p.ultimateObtained) state.ultimateObtained = p.ultimateObtained;
@@ -86,17 +95,16 @@
         skip: Array.from(state.skip),
         autoPreferMetric: state.autoPreferMetric,
         autoBlockMetric: state.autoBlockMetric,
-        showClusters: state.showClusters,
-        showBlocked: state.showBlocked,
-        taskView: state.taskView,
+        showExcluded: state.showExcluded,
         sortCol: state.sortCol,
+        sortAsc: state.sortAsc,
         customKph: state.customKph,
-        scrimshawMonsters: Array.from(state.scrimshawMonsters),
         persuadeUnlocks: Array.from(state.persuadeUnlocks),
         introspectionChoices: state.introspectionChoices,
         ultimateObtained: state.ultimateObtained,
         ultimateActiveArea: state.ultimateActiveArea,
       }));
+      announceSaved();
     } catch (e) { /* ignore */ }
   }
 
@@ -132,6 +140,19 @@
 
   window.getSlayerMult = function () { return getSlayerMult(); };
   window.getCombatMult = function () { return getCombatMult(); };
+  window.getGoalBestRates = function () {
+    var bestSlayer = null;
+    var bestCombat = null;
+    MONSTERS.filter(function (m) { return !m.cluster; }).map(computeMonster).forEach(function (m) {
+      if (m._locked) return;
+      if (!bestSlayer || m.slayXpHr > bestSlayer.slayXpHr) bestSlayer = m;
+      if (!bestCombat || m.combatXpHr > bestCombat.combatXpHr) bestCombat = m;
+    });
+    return {
+      slayer: bestSlayer ? { name: bestSlayer.name, xpPerHour: bestSlayer.slayXpHr } : null,
+      combat: bestCombat ? { name: bestCombat.name, xpPerHour: bestCombat.combatXpHr } : null,
+    };
+  };
 
   // ── Unique key for monster+cluster ─────────────────────────────────
   function monsterKey(m) {
@@ -202,7 +223,7 @@
   function computeMonster(m) {
     var key = monsterKey(m);
     var kph = state.customKph[key] || m.kph;
-    var useScrim = state.scrimshawMonsters.has(key) || state.boosts.scrimshaw;
+    var useScrim = state.boosts.scrimshaw;
 
     var sm = getSlayerMult(useScrim);
     var cm = getCombatMult(useScrim);
@@ -264,7 +285,6 @@
       gpTask: gpTask,
       _key: key,
       _customKph: !!state.customKph[key],
-      _scrim: useScrim,
       _locked: lockInfo.locked,
       _lockReasons: lockInfo.reasons,
     };
@@ -302,13 +322,47 @@
   function initTabs() {
     var btns = document.querySelectorAll('.tab-btn');
     var panels = document.querySelectorAll('.tab-panel');
+    function activateTab(btn, focusPanel, updateHash) {
+      btns.forEach(function (b) {
+        var active = b === btn;
+        b.classList.toggle('active', active);
+        b.setAttribute('aria-selected', active ? 'true' : 'false');
+        b.tabIndex = active ? 0 : -1;
+      });
+      panels.forEach(function (p) { p.classList.toggle('active', p.id === btn.dataset.tab); });
+      if (updateHash && window.location.hash !== '#' + btn.dataset.tab) window.location.hash = btn.dataset.tab;
+      if (focusPanel) document.getElementById(btn.dataset.tab).focus();
+    }
     btns.forEach(function (btn) {
       btn.addEventListener('click', function () {
-        btns.forEach(function (b) { b.classList.remove('active'); });
-        panels.forEach(function (p) { p.classList.remove('active'); });
-        btn.classList.add('active');
-        document.getElementById(btn.dataset.tab).classList.add('active');
+        activateTab(btn, false, true);
       });
+      btn.addEventListener('keydown', function (e) {
+        if (['ArrowRight', 'ArrowLeft', 'Home', 'End'].indexOf(e.key) === -1) return;
+        e.preventDefault();
+        var index = Array.prototype.indexOf.call(btns, btn);
+        if (e.key === 'ArrowRight') index = (index + 1) % btns.length;
+        if (e.key === 'ArrowLeft') index = (index - 1 + btns.length) % btns.length;
+        if (e.key === 'Home') index = 0;
+        if (e.key === 'End') index = btns.length - 1;
+        btns[index].focus();
+        activateTab(btns[index], false, true);
+      });
+    });
+    document.querySelectorAll('[data-go-tab]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        var targetButton = document.querySelector('.tab-btn[data-tab="' + button.dataset.goTab + '"]');
+        if (!targetButton) return;
+        activateTab(targetButton, false, true);
+        var target = button.dataset.goTarget ? document.getElementById(button.dataset.goTarget) : document.getElementById(button.dataset.goTab);
+        if (target) target.focus();
+      });
+    });
+    var initialTab = window.location.hash ? document.querySelector('.tab-btn[data-tab="' + window.location.hash.slice(1) + '"]') : null;
+    if (initialTab) activateTab(initialTab, false, false);
+    window.addEventListener('hashchange', function () {
+      var target = document.querySelector('.tab-btn[data-tab="' + window.location.hash.slice(1) + '"]');
+      if (target) activateTab(target, false, false);
     });
   }
 
@@ -365,6 +419,10 @@
       var item = document.createElement('div');
       var isDisabled = def.key === 'tetraContracts' && !state.boosts.bindingContracts;
       item.className = 'boost-item' + (state.boosts[def.key] ? ' active' : '') + (isDisabled ? ' disabled' : '');
+      item.setAttribute('role', 'checkbox');
+      item.setAttribute('tabindex', '0');
+      item.setAttribute('aria-checked', state.boosts[def.key] ? 'true' : 'false');
+      item.setAttribute('aria-disabled', isDisabled ? 'true' : 'false');
       item.innerHTML =
         '<div class="toggle"></div>' +
         '<span class="label">' + def.label + '</span>' +
@@ -375,6 +433,7 @@
 
         state.boosts[def.key] = !state.boosts[def.key];
         item.classList.toggle('active', state.boosts[def.key]);
+        item.setAttribute('aria-checked', state.boosts[def.key] ? 'true' : 'false');
 
         // When Binding is toggled off, also disable Tetra
         if (def.key === 'bindingContracts' && !state.boosts.bindingContracts) {
@@ -382,18 +441,22 @@
           if (boostElements.tetraContracts) {
             boostElements.tetraContracts.classList.remove('active');
             boostElements.tetraContracts.classList.add('disabled');
+            boostElements.tetraContracts.setAttribute('aria-checked', 'false');
+            boostElements.tetraContracts.setAttribute('aria-disabled', 'true');
           }
         }
         // When Binding is toggled on, enable Tetra toggle (but don't auto-activate)
         if (def.key === 'bindingContracts' && state.boosts.bindingContracts) {
           if (boostElements.tetraContracts) {
             boostElements.tetraContracts.classList.remove('disabled');
+            boostElements.tetraContracts.setAttribute('aria-disabled', 'false');
           }
         }
 
         updateAll();
         saveState();
       });
+      item.addEventListener('keydown', function (e) { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); item.click(); } });
       boostElements[def.key] = item;
       grid.appendChild(item);
     });
@@ -427,6 +490,8 @@
 
   // ── Stats Bar ──────────────────────────────────────────────────────
   function updateStatsBar() {
+    var statsBar = document.getElementById('stats-bar');
+    if (!statsBar) return;
     var boosted = MONSTERS.filter(function (m) { return !m.cluster; }).map(computeMonster);
     // Only include unlocked for "best" stats
     var unlocked = boosted.filter(function (m) { return !m._locked; });
@@ -437,11 +502,100 @@
     var bestGp = unlocked.reduce(function (a, b) { return a.gpHr > b.gpHr ? a : b; });
     var fastest = unlocked.reduce(function (a, b) { return (a.minsTask > 0 && a.minsTask < b.minsTask) ? a : b; });
 
-    document.getElementById('stats-bar').innerHTML =
+    statsBar.innerHTML =
       '<div class="stat-card"><div class="stat-value">' + fmtShort(bestSlay.slayXpHr) + '</div><div class="stat-label">Best Slay XP/Hr (' + bestSlay.name + ')</div></div>' +
       '<div class="stat-card"><div class="stat-value">' + fmtShort(bestCombat.combatXpHr) + '</div><div class="stat-label">Best Combat XP/Hr (' + bestCombat.name + ')</div></div>' +
       '<div class="stat-card"><div class="stat-value">' + fmtShort(bestGp.gpHr) + '</div><div class="stat-label">Best GP/Hr (' + bestGp.name + ')</div></div>' +
       '<div class="stat-card"><div class="stat-value">' + fastest.minsTask.toFixed(1) + 'm</div><div class="stat-label">Fastest Task (' + fastest.name + ')</div></div>';
+  }
+
+  function updatePlayerSummary() {
+    var container = document.getElementById('player-summary');
+    if (!container) return;
+    if (!_playerSkills || !_playerSkills.slayer) {
+      container.innerHTML = '<span class="profile-pill">Add stats to see which tasks are available to you.</span>';
+      return;
+    }
+    var categories = TASK_CATEGORIES.filter(function (cat) { return cat.monsters.length > 0; });
+    var available = categories.filter(function (cat) { return isCategoryEligible(cat.id); }).length;
+    var level = _playerSkills.slayer.level;
+    container.innerHTML =
+      '<span class="profile-pill"><strong>Slayer ' + level + '</strong></span>' +
+      '<span class="profile-pill"><strong>' + available + '</strong> of ' + categories.length + ' task types available</span>' +
+      '<span class="profile-pill"><strong>' + (categories.length - available) + '</strong> currently locked</span>';
+  }
+
+  function updatePlanSummary() {
+    var container = document.getElementById('plan-summary');
+    if (!container) return;
+    var result = computeWeightedAverages();
+    if (!result) {
+      container.innerHTML = '<span class="plan-summary-item">Set your unlocks and prefer/block list to see a projected task-plan outcome.</span>';
+      return;
+    }
+    container.innerHTML =
+      '<span class="plan-summary-item emphasis"><strong>Current task plan</strong></span>' +
+      '<span class="plan-summary-item">Expected <strong>' + fmtShort(result.avgSlay) + ' Slayer XP/hr</strong></span>' +
+      '<span class="plan-summary-item">Expected <strong>' + fmtShort(result.avgGp) + ' GP/hr</strong></span>' +
+      '<span class="plan-summary-item"><strong>' + state.prefer.size + '</strong> preferred · <strong>' + state.block.size + '</strong> blocked</span>';
+  }
+
+  // ── Dashboard ─────────────────────────────────────────────────────
+  function renderDashboard() {
+    var ultimateContainer = document.getElementById('dashboard-ultimate-progress');
+    if (!ultimateContainer) return;
+    var totalUltimate = typeof ULTIMATE_AREAS === 'undefined' ? 0 : countTotalItems();
+    var obtainedUltimate = totalUltimate ? countTotalObtained() : 0;
+    var ultimatePercent = totalUltimate ? obtainedUltimate / totalUltimate * 100 : 0;
+    ultimateContainer.innerHTML =
+      '<div class="dashboard-ultimate-value">' + obtainedUltimate + ' / ' + totalUltimate + '</div>' +
+      '<p class="dashboard-ultimate-detail">' + ultimatePercent.toFixed(1) + '% complete</p>' +
+      '<div class="dashboard-ultimate-track"><div class="dashboard-ultimate-fill" style="width:' + ultimatePercent.toFixed(1) + '%"></div></div>';
+
+    function renderTaskList(elementId, ids, metricKey, direction) {
+      var list = document.getElementById(elementId);
+      if (!list) return;
+      var tasks = Array.from(ids).map(function (id) {
+        var category = TASK_CATEGORIES.find(function (cat) { return cat.id === id; });
+        if (!category) return null;
+        return { category: category, score: getBestForCategory(id, metricKey) };
+      }).filter(Boolean);
+      tasks.sort(function (a, b) { return direction === 'high' ? b.score - a.score : a.score - b.score; });
+      if (!tasks.length) {
+        list.innerHTML = '<p class="dashboard-task-empty">No tasks in this list yet.</p>';
+        return;
+      }
+      list.innerHTML = tasks.map(function (task) {
+        var xpPerTask = getBestForCategory(task.category.id, 'slayXpTask');
+        return '<div class="dashboard-task">' +
+          '<span class="dashboard-task-icon">' + monsterIcon(getBestIconForCategory(task.category)) + '</span>' +
+          '<strong class="dashboard-task-name">' + task.category.label + ' <small>(' + fmtShort(xpPerTask) + ' XP/task)</small></strong>' +
+        '</div>';
+      }).join('');
+    }
+
+    renderTaskList('dashboard-prefer-list', state.prefer, state.autoPreferMetric || 'slayXpHr', 'high');
+    renderTaskList('dashboard-block-list', state.block, state.autoBlockMetric || 'slayXpHr', 'low');
+
+    document.querySelectorAll('.dashboard-hero [data-dashboard-tab]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        var tab = button.dataset.dashboardTab;
+        var nav = document.querySelector('.tab-btn[data-tab="' + tab + '"]');
+        if (nav) nav.click();
+      });
+    });
+  }
+
+  function syncSetupPanel() {
+    var panel = document.getElementById('setup-panel');
+    var welcome = document.getElementById('setup-welcome');
+    if (!panel || !welcome) return;
+    var hasProfile = !!(_playerSkills && _playerSkills.slayer);
+    welcome.hidden = hasProfile;
+    // Open setup for a new calculator, then keep the user's chosen state on
+    // subsequent visits and configuration changes.
+    if (setupProfileState === null || setupProfileState !== hasProfile) panel.open = !hasProfile;
+    setupProfileState = hasProfile;
   }
 
   // ── Prefer / Block name sets ───────────────────────────────────────
@@ -468,14 +622,8 @@
     var tbody = document.getElementById('tasks-table-body');
     var sortKey = state.sortCol;
     var asc = state.sortAsc;
-    var blockedNames = getBlockedNames();
     var preferredNames = getPreferredNames();
-
-    if (state.taskView) {
-      renderTaskViewTable(tbody, sortKey, asc, blockedNames, preferredNames);
-    } else {
-      renderMonsterViewTable(tbody, sortKey, asc, blockedNames, preferredNames);
-    }
+    renderTaskViewTable(tbody, sortKey, asc, preferredNames);
 
     // Update sort indicators on headers
     document.querySelectorAll('#tasks-table th').forEach(function (th) {
@@ -483,98 +631,32 @@
       if (th.dataset.sort === sortKey) {
         th.classList.add('sorted');
         if (asc) th.classList.add('asc');
+        th.setAttribute('aria-sort', asc ? 'ascending' : 'descending');
+      } else if (th.dataset.sort) {
+        th.setAttribute('aria-sort', 'none');
       }
     });
 
-    // Update toggle button states
-    var clusterBtn = document.getElementById('toggle-clusters');
-    var taskViewBtn = document.getElementById('toggle-task-view');
-    if (clusterBtn) {
-      clusterBtn.style.display = state.taskView ? 'none' : '';
-    }
-    if (taskViewBtn) {
-      taskViewBtn.classList.toggle('active', state.taskView);
+    var excludedBtn = document.getElementById('toggle-excluded');
+    if (excludedBtn) {
+      excludedBtn.classList.toggle('active', state.showExcluded);
+      excludedBtn.textContent = state.showExcluded ? 'Hide excluded' : 'Show excluded';
+      excludedBtn.setAttribute('aria-pressed', state.showExcluded ? 'true' : 'false');
     }
 
     // Toggle introspection column visibility
     var table = document.getElementById('tasks-table');
     table.classList.toggle('introspection-active', state.boosts.slayerIntrospection);
+    table.dataset.focus = sortKey.indexOf('slay') === 0 ? 'slayer' : (sortKey.indexOf('combat') === 0 ? 'combat' : (sortKey.indexOf('gp') === 0 ? 'gp' : 'all'));
   }
 
-  // ── Individual Monster View ──────────────────────────────────────
-  function renderMonsterViewTable(tbody, sortKey, asc, blockedNames, preferredNames) {
-    var data = MONSTERS.map(computeMonster);
-
-    if (state.search) {
-      var q = state.search.toLowerCase();
-      data = data.filter(function (m) { return displayName(m).toLowerCase().indexOf(q) !== -1; });
-    }
-
-    if (!state.showClusters) {
-      data = data.filter(function (m) { return !m.cluster; });
-    }
-
-    var visible = [];
-    var blocked = [];
-    data.forEach(function (m) {
-      if (blockedNames.has(m.name)) {
-        blocked.push(m);
-      } else {
-        visible.push(m);
-      }
-    });
-
-    var sorter = function (a, b) {
-      if (sortKey === 'name') {
-        return asc ? displayName(a).localeCompare(displayName(b)) : displayName(b).localeCompare(displayName(a));
-      }
-      var va = a[sortKey] || 0;
-      var vb = b[sortKey] || 0;
-      return asc ? va - vb : vb - va;
-    };
-    visible.sort(sorter);
-    blocked.sort(sorter);
-
-    tbody.innerHTML = '';
-
-    if (visible.length === 0 && (!state.showBlocked || blocked.length === 0)) {
-      tbody.innerHTML = '<tr><td colspan="12" class="no-results">No creatures found.</td></tr>';
-      return;
-    }
-
-    var rank = 0;
-    visible.forEach(function (m) {
-      if (!m.cluster) rank++;
-      var isPreferred = preferredNames.has(m.name);
-      var tr = document.createElement('tr');
-      if (m.cluster) tr.classList.add('cluster');
-      if (m._locked) tr.classList.add('locked-row');
-      if (isPreferred && !m._locked) tr.style.borderLeft = '3px solid var(--green)';
-      tr.innerHTML = buildRow(m, rank, sortKey, isPreferred);
-      attachRowEvents(tr, m);
-      tbody.appendChild(tr);
-    });
-
-    if (state.showBlocked && blocked.length > 0) {
-      var sep = document.createElement('tr');
-      sep.className = 'blocked-separator';
-      sep.innerHTML = '<td colspan="12" class="blocked-label">Blocked (' + blocked.length + ')</td>';
-      tbody.appendChild(sep);
-
-      blocked.forEach(function (m) {
-        var tr = document.createElement('tr');
-        tr.className = 'blocked-row';
-        if (m.cluster) tr.classList.add('cluster');
-        if (m._locked) tr.classList.add('locked-row');
-        tr.innerHTML = buildRow(m, '', sortKey, false);
-        attachRowEvents(tr, m);
-        tbody.appendChild(tr);
-      });
-    }
+  function announceTaskAction(message) {
+    var status = document.getElementById('task-action-status');
+    if (status) status.textContent = message;
   }
 
   // ── Task View (grouped by task assignment name) ──────────────────
-  function renderTaskViewTable(tbody, sortKey, asc, blockedNames, preferredNames) {
+  function renderTaskViewTable(tbody, sortKey, asc, preferredNames) {
     tbody.innerHTML = '';
 
     // Build grouped data: for each task category, find best stats
@@ -594,12 +676,18 @@
       var pool = unlocked.length > 0 ? unlocked : monsters;
 
       var metric = sortKey === 'name' ? 'slayXpHr' : sortKey;
+      // An assignment's row should represent the creature that wins under the
+      // current ranking direction. This is especially important for a
+      // low-first comparison such as shortest task time.
       var best = pool.reduce(function (a, b) {
-        return (b[metric] || 0) > (a[metric] || 0) ? b : a;
+        var aValue = a[metric] || 0;
+        var bValue = b[metric] || 0;
+        return (asc && sortKey !== 'name') ? (bValue < aValue ? b : a) : (bValue > aValue ? b : a);
       });
 
       var allLocked = unlocked.length === 0;
       var isBlocked = state.block.has(cat.id);
+      var isSkipped = state.skip.has(cat.id);
       var isPreferred = state.prefer.has(cat.id);
 
       return {
@@ -608,6 +696,8 @@
         monsters: monsters,
         allLocked: allLocked,
         isBlocked: isBlocked,
+        isSkipped: isSkipped,
+        isExcluded: isBlocked || isSkipped,
         isPreferred: isPreferred,
       };
     }).filter(Boolean);
@@ -620,13 +710,13 @@
         return g.monsters.some(function (m) { return m.name.toLowerCase().indexOf(q) !== -1; });
       });
     }
-
-    // Split visible vs blocked
+    // Excluded assignments are only shown on request. They stay in their
+    // ranked positions rather than being moved into a confusing second table.
     var visible = [];
-    var blocked = [];
+    var excluded = [];
     groups.forEach(function (g) {
-      if (g.isBlocked) {
-        blocked.push(g);
+      if (g.isExcluded) {
+        excluded.push(g);
       } else {
         visible.push(g);
       }
@@ -642,10 +732,16 @@
       return asc ? va - vb : vb - va;
     };
     visible.sort(sorter);
-    blocked.sort(sorter);
-
-    if (visible.length === 0 && (!state.showBlocked || blocked.length === 0)) {
-      tbody.innerHTML = '<tr><td colspan="12" class="no-results">No tasks found.</td></tr>';
+    excluded.sort(sorter);
+    if (state.showExcluded) {
+      visible = visible.concat(excluded).sort(sorter);
+      excluded = [];
+    }
+    if (visible.length === 0 && (!state.showExcluded || excluded.length === 0)) {
+      var emptyMessage = !state.showExcluded && excluded.length
+        ? 'All matching assignments are excluded. Select Show excluded to review them.'
+        : 'No Slayer assignments found.';
+      tbody.innerHTML = '<tr><td colspan="11" class="no-results">' + emptyMessage + '</td></tr>';
       return;
     }
 
@@ -655,16 +751,6 @@
       appendTaskGroup(tbody, g, rank, sortKey);
     });
 
-    if (state.showBlocked && blocked.length > 0) {
-      var sep = document.createElement('tr');
-      sep.className = 'blocked-separator';
-      sep.innerHTML = '<td colspan="12" class="blocked-label">Blocked (' + blocked.length + ')</td>';
-      tbody.appendChild(sep);
-
-      blocked.forEach(function (g) {
-        appendTaskGroup(tbody, g, '', sortKey, true);
-      });
-    }
   }
 
   function appendTaskGroup(tbody, g, rank, sortKey, isBlockedSection) {
@@ -672,12 +758,13 @@
     var m = g.best;
     var hl = function (col) { return sortKey === col ? ' highlight' : ''; };
     var lockedClass = g.allLocked ? ' locked-text' : '';
+    var groupLevelRequirement = (m._lockReasons || []).filter(function (reason) { return reason.indexOf('Slayer ') === 0; })[0];
     var expandIcon = g.monsters.length > 1 ? (expanded ? '\u25BC ' : '\u25B6 ') : '';
     var isSkipped = state.skip.has(g.cat.id);
 
     var tr = document.createElement('tr');
     tr.className = 'task-group-row';
-    if (isBlockedSection) tr.classList.add('blocked-row');
+    if (isBlockedSection || g.isBlocked) tr.classList.add('blocked-row');
     if (g.allLocked) tr.classList.add('locked-row');
     if (isSkipped) tr.classList.add('skipped-row');
     if (g.isPreferred && !g.allLocked) tr.style.borderLeft = '3px solid var(--green)';
@@ -699,24 +786,25 @@
         '<span class="expand-icon">' + expandIcon + '</span>' +
         '<span class="creature-name">' + g.cat.label + '</span>' +
         (g.isPreferred && !g.allLocked ? ' <span class="prefer-tag">PREFER</span>' : '') +
-        (g.allLocked ? ' <span class="locked-tag">LOCKED</span>' : '') +
+        (g.isBlocked ? ' <span class="blocked-tag">BLOCKED</span>' : '') +
+        (isSkipped ? ' <span class="skip-tag">EXTENDED BLOCK</span>' : '') +
+        (g.allLocked ? ' <span class="locked-tag">LOCKED' + (groupLevelRequirement ? ' · ' + groupLevelRequirement.replace(' required ', ' ') : '') + '</span>' : '') +
         subLabel +
       '</td>' +
       '<td class="' + hl('kph') + '">' + fmt(m.kph) + '</td>' +
       '<td class="intro-cell"><button class="intro-btn ' + (state.introspectionChoices[g.cat.id] || 'max') + '" data-cat="' + g.cat.id + '">' + (state.introspectionChoices[g.cat.id] || 'max').toUpperCase() + '</button></td>' +
-      '<td class="' + lockedClass + hl('slayXpHr') + '">' + fmt(m.slayXpHr) + '</td>' +
-      '<td class="' + lockedClass + hl('combatXpHr') + '">' + fmt(m.combatXpHr) + '</td>' +
-      '<td class="gp-col' + lockedClass + hl('gpHr') + '">' + fmt(m.gpHr) + '</td>' +
-      '<td class="gp-col' + lockedClass + hl('gpTask') + '">' + fmt(m.gpTask) + '</td>' +
-      '<td class="' + lockedClass + hl('slayXpTask') + '">' + fmt(m.slayXpTask) + '</td>' +
-      '<td class="' + lockedClass + hl('combatXpTask') + '">' + fmt(m.combatXpTask) + '</td>' +
+      '<td class="metric-slayer ' + lockedClass + hl('slayXpHr') + '">' + fmt(m.slayXpHr) + '</td>' +
+      '<td class="metric-combat ' + lockedClass + hl('combatXpHr') + '">' + fmt(m.combatXpHr) + '</td>' +
+      '<td class="metric-gp gp-col' + lockedClass + hl('gpHr') + '">' + fmt(m.gpHr) + '</td>' +
+      '<td class="metric-gp gp-col' + lockedClass + hl('gpTask') + '">' + fmt(m.gpTask) + '</td>' +
+      '<td class="metric-slayer ' + lockedClass + hl('slayXpTask') + '">' + fmt(m.slayXpTask) + '</td>' +
+      '<td class="metric-combat ' + lockedClass + hl('combatXpTask') + '">' + fmt(m.combatXpTask) + '</td>' +
       '<td class="' + lockedClass + hl('minsTask') + '">' + m.minsTask.toFixed(1) + '</td>' +
-      '<td class="scrim-cell"></td>' +
-      '<td class="skip-cell"><input type="checkbox" class="skip-toggle" data-cat="' + g.cat.id + '"' + (isSkipped ? ' checked' : '') + '></td>';
+      '<td class="skip-cell"><input type="checkbox" class="skip-toggle" aria-label="Skip ' + g.cat.label + ' task" title="Skip this whole assignment with Slayer points" data-cat="' + g.cat.id + '"' + (isSkipped ? ' checked' : '') + '></td>';
 
     if (g.monsters.length > 1) {
       tr.addEventListener('click', function (e) {
-        if (e.target.closest('.scrim-toggle') || e.target.closest('.skip-toggle') || e.target.closest('.intro-btn')) return;
+        if (e.target.closest('.skip-toggle') || e.target.closest('.intro-btn')) return;
         if (expanded) {
           state.expandedTasks.delete(g.cat.id);
         } else {
@@ -763,7 +851,8 @@
       sorted.forEach(function (mon) {
         var subTr = document.createElement('tr');
         subTr.className = 'task-child-row';
-        if (isBlockedSection) subTr.classList.add('blocked-row');
+        if (isBlockedSection || g.isBlocked) subTr.classList.add('blocked-row');
+        if (isSkipped) subTr.classList.add('skipped-row');
         if (mon._locked) subTr.classList.add('locked-row');
         subTr.innerHTML = buildRow(mon, '', sortKey, false);
         attachRowEvents(subTr, mon);
@@ -775,9 +864,9 @@
   function buildRow(m, rank, sortKey, isPreferred) {
     var hl = function (col) { return sortKey === col ? ' highlight' : ''; };
     var kphClass = 'kph-cell' + (m._customKph ? ' custom-kph' : '');
-    var scrimChecked = m._scrim ? ' checked' : '';
     var lockedClass = m._locked ? ' locked-text' : '';
     var lockTitle = m._locked ? ' title="' + m._lockReasons.join(', ').replace(/"/g, '&quot;') + '"' : '';
+    var levelRequirement = m._lockReasons.filter(function (reason) { return reason.indexOf('Slayer ') === 0; })[0];
 
     return (
       '<td class="' + lockedClass + '"' + lockTitle + '>' +
@@ -785,7 +874,7 @@
         monsterIcon(m.name) +
         '<span class="creature-name">' + displayName(m) + '</span>' +
         (isPreferred && !m._locked ? ' <span class="prefer-tag">PREFER</span>' : '') +
-        (m._locked ? ' <span class="locked-tag">LOCKED</span>' : '') +
+        (m._locked ? ' <span class="locked-tag">LOCKED' + (levelRequirement ? ' · ' + levelRequirement.replace(' required ', ' ') : '') + '</span>' : '') +
       '</td>' +
       '<td class="' + kphClass + hl('kph') + '" data-key="' + m._key + '" data-base="' + m.kph + '">' +
         '<span class="kph-value">' + fmt(m.kph) + '</span>' +
@@ -797,19 +886,18 @@
         var choice = state.introspectionChoices[catId] || 'max';
         return '<td class="intro-cell"><button class="intro-btn ' + choice + '" data-cat="' + catId + '">' + choice.toUpperCase() + '</button></td>';
       })() +
-      '<td class="' + lockedClass + hl('slayXpHr') + '">' + fmt(m.slayXpHr) + '</td>' +
-      '<td class="' + lockedClass + hl('combatXpHr') + '">' + fmt(m.combatXpHr) + '</td>' +
-      '<td class="gp-col' + lockedClass + hl('gpHr') + '">' + fmt(m.gpHr) + '</td>' +
-      '<td class="gp-col' + lockedClass + hl('gpTask') + '">' + fmt(m.gpTask) + '</td>' +
-      '<td class="' + lockedClass + hl('slayXpTask') + '">' + fmt(m.slayXpTask) + '</td>' +
-      '<td class="' + lockedClass + hl('combatXpTask') + '">' + fmt(m.combatXpTask) + '</td>' +
+      '<td class="metric-slayer ' + lockedClass + hl('slayXpHr') + '">' + fmt(m.slayXpHr) + '</td>' +
+      '<td class="metric-combat ' + lockedClass + hl('combatXpHr') + '">' + fmt(m.combatXpHr) + '</td>' +
+      '<td class="metric-gp gp-col' + lockedClass + hl('gpHr') + '">' + fmt(m.gpHr) + '</td>' +
+      '<td class="metric-gp gp-col' + lockedClass + hl('gpTask') + '">' + fmt(m.gpTask) + '</td>' +
+      '<td class="metric-slayer ' + lockedClass + hl('slayXpTask') + '">' + fmt(m.slayXpTask) + '</td>' +
+      '<td class="metric-combat ' + lockedClass + hl('combatXpTask') + '">' + fmt(m.combatXpTask) + '</td>' +
       '<td class="' + lockedClass + hl('minsTask') + '">' + m.minsTask.toFixed(1) + '</td>' +
-      '<td class="scrim-cell"><input type="checkbox" class="scrim-toggle" data-key="' + m._key + '"' + scrimChecked + '></td>' +
       (function () {
         if (m.cluster) return '<td class="skip-cell"></td>';
         var catId = getCategoryForMonster(m.name);
         var skipChecked = catId && state.skip.has(catId) ? ' checked' : '';
-        return '<td class="skip-cell"><input type="checkbox" class="skip-toggle" data-cat="' + (catId || '') + '"' + skipChecked + '></td>';
+        return '<td class="skip-cell"><input type="checkbox" class="skip-toggle" aria-label="Skip ' + displayName(m) + ' task" title="Skip this whole assignment with Slayer points" data-cat="' + (catId || '') + '"' + skipChecked + '></td>';
       })()
     );
   }
@@ -858,20 +946,6 @@
       });
     }
 
-    var scrimToggle = tr.querySelector('.scrim-toggle');
-    if (scrimToggle) {
-      scrimToggle.addEventListener('click', function (e) { e.stopPropagation(); });
-      scrimToggle.addEventListener('change', function () {
-        if (scrimToggle.checked) {
-          state.scrimshawMonsters.add(m._key);
-        } else {
-          state.scrimshawMonsters.delete(m._key);
-        }
-        saveState();
-        updateAll();
-      });
-    }
-
     var skipToggle = tr.querySelector('.skip-toggle');
     if (skipToggle) {
       skipToggle.addEventListener('click', function (e) { e.stopPropagation(); });
@@ -896,6 +970,9 @@
 
   function initTasksTable() {
     document.querySelectorAll('#tasks-table th[data-sort]').forEach(function (th) {
+      th.setAttribute('role', 'button');
+      th.setAttribute('tabindex', '0');
+      th.setAttribute('aria-label', 'Sort by ' + th.textContent.trim());
       th.addEventListener('click', function () {
         var col = th.dataset.sort;
         if (state.sortCol === col) {
@@ -908,6 +985,9 @@
         renderTasksTable();
         var sel = document.getElementById('sort-select');
         if (sel) sel.value = state.sortCol;
+      });
+      th.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); th.click(); }
       });
     });
 
@@ -925,32 +1005,19 @@
       renderTasksTable();
     });
 
-    var clusterBtn = document.getElementById('toggle-clusters');
-    clusterBtn.classList.toggle('active', state.showClusters);
-    clusterBtn.addEventListener('click', function () {
-      state.showClusters = !state.showClusters;
-      clusterBtn.classList.toggle('active', state.showClusters);
+    var excludedBtn = document.getElementById('toggle-excluded');
+    excludedBtn.addEventListener('click', function () {
+      state.showExcluded = !state.showExcluded;
       saveState();
       renderTasksTable();
     });
 
-    var blockedBtn = document.getElementById('toggle-blocked');
-    blockedBtn.classList.toggle('active', state.showBlocked);
-    blockedBtn.addEventListener('click', function () {
-      state.showBlocked = !state.showBlocked;
-      blockedBtn.classList.toggle('active', state.showBlocked);
-      saveState();
-      renderTasksTable();
-    });
-
-    var taskViewBtn = document.getElementById('toggle-task-view');
-    taskViewBtn.classList.toggle('active', state.taskView);
-    taskViewBtn.addEventListener('click', function () {
-      state.taskView = !state.taskView;
-      state.expandedTasks = new Set();
-      taskViewBtn.classList.toggle('active', state.taskView);
-      saveState();
-      renderTasksTable();
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return;
+      var target = e.target;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT')) return;
+      e.preventDefault();
+      document.getElementById('task-search').focus();
     });
   }
 
@@ -1035,6 +1102,7 @@
 
   // Add task to prefer (pinned), evicting worst non-pinned if full
   function pinPrefer(catId) {
+    if (!state.prefer.has(catId) && state.pinnedPrefer.size >= MAX_PREFER) return;
     if (state.block.has(catId)) { state.block.delete(catId); state.pinnedBlock.delete(catId); }
     state.skip.delete(catId);
     state.pinnedPrefer.add(catId);
@@ -1058,6 +1126,7 @@
 
   // Add task to block (pinned), evicting worst non-pinned if full
   function pinBlock(catId) {
+    if (!state.block.has(catId) && state.pinnedBlock.size >= MAX_BLOCK) return;
     if (state.prefer.has(catId)) { state.prefer.delete(catId); state.pinnedPrefer.delete(catId); }
     state.skip.delete(catId);
     state.pinnedBlock.add(catId);
@@ -1095,11 +1164,14 @@
   function toggleSkip(catId) {
     if (state.skip.has(catId)) {
       state.skip.delete(catId);
+      announceTaskAction('Task restored to your plan.');
     } else {
       state.skip.add(catId);
       // Remove from prefer/block if skipped
       state.prefer.delete(catId); state.pinnedPrefer.delete(catId);
       state.block.delete(catId); state.pinnedBlock.delete(catId);
+      var category = TASK_CATEGORIES.find(function (cat) { return cat.id === catId; });
+      announceTaskAction((category ? category.label : 'Task') + ' skipped: removed from prefer/block and weighted averages.');
     }
     saveState();
     runAutoFill();
@@ -1159,6 +1231,8 @@
 
         var isSkipped = state.skip.has(cat.id);
         var isLocked = !isCategoryEligible(cat.id);
+        var preferFull = state.pinnedPrefer.size >= MAX_PREFER;
+        var blockFull = state.pinnedBlock.size >= MAX_BLOCK;
         chip = document.createElement('div');
         chip.className = 'task-chip' + (isSkipped ? ' skipped' : '') + (isLocked ? ' locked-chip' : '');
         chip.innerHTML =
@@ -1167,13 +1241,13 @@
             (isLocked ? ' <span class="locked-tag">LOCKED</span>' : '') +
           '</span>' +
           '<div class="chip-actions">' +
-            '<button class="chip-btn prefer-btn" title="Prefer (pin)"' + (isLocked ? ' disabled' : '') + '>+</button>' +
-            '<button class="chip-btn block-btn" title="Block (pin)">&minus;</button>' +
+            '<button class="chip-btn prefer-btn" title="' + (preferFull ? 'All 8 prefer slots are pinned' : 'Prefer (pin)') + '"' + (isLocked || preferFull ? ' disabled' : '') + '>+</button>' +
+            '<button class="chip-btn block-btn" title="' + (blockFull ? 'All 8 block slots are pinned' : 'Block (pin)') + '"' + (blockFull ? ' disabled' : '') + '>&minus;</button>' +
           '</div>';
-        if (!isLocked) {
+        if (!isLocked && !preferFull) {
           chip.querySelector('.prefer-btn').addEventListener('click', function (e) { e.stopPropagation(); pinPrefer(cat.id); });
         }
-        chip.querySelector('.block-btn').addEventListener('click', function (e) { e.stopPropagation(); pinBlock(cat.id); });
+        if (!blockFull) chip.querySelector('.block-btn').addEventListener('click', function (e) { e.stopPropagation(); pinBlock(cat.id); });
         unassignedList.appendChild(chip);
       }
     });
@@ -1339,7 +1413,7 @@
       avgGp = 0.8 * avgGp + 0.2 * bestGp;
     }
 
-    return { avgSlay: Math.round(avgSlay), avgCombat: Math.round(avgCombat), avgGp: Math.round(avgGp) };
+    return { avgSlay: Math.round(avgSlay), avgCombat: Math.round(avgCombat), avgGp: Math.round(avgGp), eligibleTasks: entries.length, preferredWeight: preferWeight, totalWeight: totalWeight };
   }
 
   function updateWeightedAverage() {
@@ -1355,7 +1429,8 @@
     bar.innerHTML =
       '<div class="avg-item"><span class="avg-label">Weighted Avg Slay XP/Hr</span> <span class="avg-value">' + fmtShort(result.avgSlay) + '</span></div>' +
       '<div class="avg-item"><span class="avg-label">Weighted Avg Combat XP/Hr</span> <span class="avg-value">' + fmtShort(result.avgCombat) + '</span></div>' +
-      '<div class="avg-item"><span class="avg-label">Weighted Avg GP/Hr</span> <span class="avg-value">' + fmtShort(result.avgGp) + '</span></div>';
+      '<div class="avg-item"><span class="avg-label">Weighted Avg GP/Hr</span> <span class="avg-value">' + fmtShort(result.avgGp) + '</span></div>' +
+      '<div class="avg-item"><span class="avg-label">Eligible task pool</span> <span class="avg-value">' + result.eligibleTasks + '</span></div>';
   }
 
   // ── Persuade Toggles ──────────────────────────────────────────────
@@ -1442,6 +1517,7 @@
     }
 
     document.getElementById('reset-prefs').addEventListener('click', function () {
+      if (!window.confirm('Restore the default prefer, block, and skip choices? Your pinned choices will be cleared.')) return;
       state.prefer = new Set(DEFAULT_PREFER);
       state.block = new Set(DEFAULT_BLOCK);
       state.pinnedPrefer = new Set();
@@ -1724,7 +1800,7 @@
     var total = countTotalItems();
     var pct = total > 0 ? (obtained / total * 100) : 0;
     container.innerHTML =
-      '<span class="ultimate-progress-text">Overall: <strong>' + obtained + ' / ' + total + '</strong> items obtained</span>' +
+      '<span class="ultimate-progress-text">Overall: <strong>' + obtained + ' / ' + total + '</strong> items obtained <span class="progress-percent">(' + pct.toFixed(1) + '%)</span></span>' +
       '<div class="ultimate-progress-track">' +
         '<div class="ultimate-progress-fill" style="width:' + pct.toFixed(1) + '%"></div>' +
       '</div>';
@@ -1752,7 +1828,7 @@
     if (!area) return;
 
     var titleEl = document.getElementById('ultimate-area-title');
-    titleEl.textContent = 'Title: ' + area.title;
+    titleEl.textContent = area.title;
 
     var grid = document.getElementById('ultimate-items');
     grid.innerHTML = '';
@@ -1770,11 +1846,13 @@
 
       card.innerHTML =
         '<div class="ultimate-card-header">' +
-          '<img class="ultimate-card-img" src="' + getUltimateImagePath(drop.item) + '" alt="" onerror="this.style.display=\'none\'">' +
-          '<span class="ultimate-card-name">' + drop.item + '</span>' +
-          '<span class="ultimate-card-check" data-item="' + escapedItem + '">' +
+          '<button class="ultimate-card-open" type="button" aria-label="Show details for ' + escapedItem + '" aria-expanded="' + (isExpanded ? 'true' : 'false') + '">' +
+            '<img class="ultimate-card-img" src="' + getUltimateImagePath(drop.item) + '" alt="" onerror="this.style.display=\'none\'">' +
+            '<span class="ultimate-card-name">' + drop.item + '</span>' +
+          '</button>' +
+          '<button class="ultimate-card-check" type="button" aria-label="Mark ' + escapedItem + ' as ' + (isObtained ? 'not obtained' : 'obtained') + '" aria-pressed="' + (isObtained ? 'true' : 'false') + '" data-item="' + escapedItem + '">' +
             (isObtained ? '&#10003;' : '') +
-          '</span>' +
+          '</button>' +
         '</div>' +
         '<div class="ultimate-card-details">' +
           '<div class="ultimate-detail-row">' +
@@ -1803,7 +1881,7 @@
       });
 
       // Header click: expand/collapse
-      card.querySelector('.ultimate-card-header').addEventListener('click', function (e) {
+      card.querySelector('.ultimate-card-open').addEventListener('click', function (e) {
         if (e.target.closest('.ultimate-card-check')) return;
         if (state.ultimateExpanded[drop.item]) {
           delete state.ultimateExpanded[drop.item];
@@ -1811,6 +1889,7 @@
           state.ultimateExpanded[drop.item] = true;
         }
         card.classList.toggle('expanded');
+        card.querySelector('.ultimate-card-open').setAttribute('aria-expanded', state.ultimateExpanded[drop.item] ? 'true' : 'false');
       });
 
       grid.appendChild(card);
@@ -1823,6 +1902,7 @@
     renderUltimateAreaTabs();
     renderUltimateItems();
     updateAlt1CheckButton();
+    renderDashboard();
   }
 
   // ── Ultimate Uncheck ─────────────────────────────────────────────
@@ -1836,10 +1916,12 @@
       var exportMenu = document.getElementById('ultimate-export-menu');
       if (exportMenu) exportMenu.classList.remove('open');
       menu.classList.toggle('open');
+      btn.setAttribute('aria-expanded', menu.classList.contains('open') ? 'true' : 'false');
     });
 
     document.addEventListener('click', function () {
       menu.classList.remove('open');
+      btn.setAttribute('aria-expanded', 'false');
     });
 
     menu.addEventListener('click', function (e) {
@@ -1851,6 +1933,9 @@
       opt.addEventListener('click', function () {
         menu.classList.remove('open');
         var mode = opt.dataset.mode;
+
+        var scope = mode === 'all' ? 'all Ultimate Slayer progress' : 'the progress for this area';
+        if (!window.confirm('Clear ' + scope + '? This cannot be undone.')) return;
 
         if (mode === 'all') {
           state.ultimateObtained = {};
@@ -1879,10 +1964,12 @@
       var uncheckMenu = document.getElementById('ultimate-uncheck-menu');
       if (uncheckMenu) uncheckMenu.classList.remove('open');
       menu.classList.toggle('open');
+      btn.setAttribute('aria-expanded', menu.classList.contains('open') ? 'true' : 'false');
     });
 
     document.addEventListener('click', function () {
       menu.classList.remove('open');
+      btn.setAttribute('aria-expanded', 'false');
     });
 
     menu.addEventListener('click', function (e) {
@@ -1891,6 +1978,13 @@
       menu.classList.remove('open');
       var mode = opt.dataset.mode;
       exportUltimateImage(mode === 'all' ? 'all' : 'area');
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape') return;
+      menu.classList.remove('open');
+      btn.setAttribute('aria-expanded', 'false');
+      btn.focus();
     });
   }
 
@@ -2141,8 +2235,8 @@
     var btn = checkBtn;
 
     btn.style.display = '';
-    btn.disabled = true;
-    btn.title = 'Waiting for Alt1 fixes';
+    btn.disabled = false;
+    btn.title = 'Start or stop collection-log scanning';
 
     // Shared update handler used by both UltimateDetector and SkipDetector
     function handleDetectorUpdate(changes) {
@@ -2172,7 +2266,10 @@
       // Gold flash for manual-only items (SKIP_DETECT) when area is visible
       if (conflicts.length) {
         conflicts.forEach(function (item) {
-          var card = document.querySelector('.ultimate-card[data-item="' + CSS.escape(item) + '"]');
+          var escapedItem = (window.CSS && typeof CSS.escape === 'function')
+            ? CSS.escape(item)
+            : item.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+          var card = document.querySelector('.ultimate-card[data-item="' + escapedItem + '"]');
           if (!card) return;
           card.classList.remove('detect-conflict');
           void card.offsetWidth; // force reflow to restart animation
@@ -2191,17 +2288,27 @@
         btn.classList.remove('active');
         btn.textContent = 'Check';
       } else {
-        var opts = { onUpdate: handleDetectorUpdate };
-        var initMain = UltimateDetector.init(opts);
-        var initSkip = (typeof SkipDetector !== 'undefined')
-          ? SkipDetector.init(opts)
-          : Promise.resolve();
-        Promise.all([initMain, initSkip]).then(function () {
-          UltimateDetector.start();
-          if (typeof SkipDetector !== 'undefined') SkipDetector.start();
-          btn.classList.add('active');
-          btn.textContent = 'Checking...';
-        });
+        try {
+          var opts = { onUpdate: handleDetectorUpdate };
+          var initMain = UltimateDetector.init(opts);
+          var initSkip = (typeof SkipDetector !== 'undefined')
+            ? SkipDetector.init(opts)
+            : Promise.resolve();
+          Promise.all([initMain, initSkip]).then(function () {
+            UltimateDetector.start();
+            if (typeof SkipDetector !== 'undefined') SkipDetector.start();
+            btn.classList.add('active');
+            btn.textContent = 'Checking...';
+          }).catch(function () {
+            btn.classList.remove('active');
+            btn.textContent = 'Check';
+            btn.title = 'Could not start scanning. Check that Alt1 is linked to RuneScape, then try again.';
+          });
+        } catch (e) {
+          btn.classList.remove('active');
+          btn.textContent = 'Check';
+          btn.title = 'Could not start scanning. Check that Alt1 is linked to RuneScape, then try again.';
+        }
       }
     });
   }
@@ -2243,6 +2350,10 @@
   function updateAll() {
     updateMultiplierBar();
     updateStatsBar();
+    updatePlayerSummary();
+    updatePlanSummary();
+    renderDashboard();
+    syncSetupPanel();
     renderTasksTable();
     renderPrefBlock();
     updateWeightedAverage();

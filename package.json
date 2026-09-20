@@ -1,0 +1,7 @@
+{
+  "name": "slayer-combat-calculations",
+  "private": true,
+  "scripts": {
+    "dev": "npx --yes vite --host 127.0.0.1"
+  }
+}
