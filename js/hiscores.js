@@ -54,8 +54,19 @@ const GOAL_SKILLS = [
 ];
 
 // RuneScape's APIs do not allow browser cross-origin reads. GitHub Pages has no
-// server component, so requests go through this CORS-enabled relay instead.
-const CORS_RELAY = 'https://api.allorigins.win/get?url=';
+// server component, so requests go through CORS-enabled relays instead. Routes
+// are tried in order until one returns usable data; an empty prefix is a direct
+// request, kept in case the APIs ever start sending CORS headers.
+// json: relay wraps the body in { contents }. plainUrl: relay takes the target
+// URL unencoded on its path.
+const CORS_ROUTES = [
+  { prefix: 'https://api.allorigins.win/get?url=', json: true },
+  { prefix: 'https://api.allorigins.win/raw?url=' },
+  { prefix: 'https://api.cors.lol/?url=' },
+  { prefix: 'https://r.jina.ai/', plainUrl: true },
+  { prefix: 'https://api.codetabs.com/v1/proxy?quest=' },
+  { prefix: '' },
+];
 
 function isLocalDevelopment() {
   return location.hostname === '127.0.0.1' || location.hostname === 'localhost';
@@ -67,33 +78,48 @@ function unwrapReaderContent(text) {
   return markerIndex === -1 ? text.trim() : text.slice(markerIndex + marker.length).trim();
 }
 
-async function fetchViaRelay(url, timeoutMs) {
-  var response = await fetch(CORS_RELAY + encodeURIComponent(url), {
-    signal: AbortSignal.timeout(timeoutMs || 12000),
+async function fetchViaRoute(route, url, timeoutMs) {
+  var response = await fetch(route.prefix + (route.prefix && !route.plainUrl ? encodeURIComponent(url) : url), {
+    signal: AbortSignal.timeout(timeoutMs),
   });
-  if (!response.ok) throw new Error('The player-data relay is temporarily unavailable.');
+  if (!response.ok) throw new Error('Route unavailable.');
+  if (!route.json) return unwrapReaderContent(await response.text());
   var payload = await response.json();
-  if (typeof payload.contents !== 'string') throw new Error('The player-data relay returned an unexpected response.');
+  if (typeof payload.contents !== 'string') throw new Error('Unexpected relay response.');
   return payload.contents;
+}
+
+// Returns the first non-null result of parse(text) across all routes, or null.
+async function fetchViaRelay(url, timeoutMs, parse) {
+  for (var i = 0; i < CORS_ROUTES.length; i++) {
+    try {
+      var result = parse(await fetchViaRoute(CORS_ROUTES[i], url, timeoutMs));
+      if (result) return result;
+    } catch (e) { /* try next route */ }
+  }
+  return null;
 }
 
 // ── Hiscores Fetch ─────────────────────────────────────────────────
 async function fetchHiscores(playerName) {
   const baseUrl = 'https://secure.runescape.com/m=hiscore/index_lite.ws?player=' + encodeURIComponent(playerName);
 
-  var text;
+  function parse(text) {
+    if (!text.includes(',')) return null;
+    var skills = parseHiscores(normalizeHiscoresCsv(text));
+    return skills.slayer ? skills : null;
+  }
+
+  var skills;
   if (isLocalDevelopment()) {
     var response = await fetch('/api/hiscores?player=' + encodeURIComponent(playerName), { signal: AbortSignal.timeout(12000) });
     if (!response.ok) throw new Error('Could not fetch hiscores. Check the player name and try again.');
-    text = unwrapReaderContent(await response.text());
+    skills = parse(unwrapReaderContent(await response.text()));
   } else {
-    text = await fetchViaRelay(baseUrl);
+    skills = await fetchViaRelay(baseUrl, 8000, parse);
   }
-  if (text.includes(',')) {
-    var skills = parseHiscores(normalizeHiscoresCsv(text));
-    if (skills.slayer) return skills;
-  }
-  throw new Error('No hiscore data was found for that player. Check the spelling and privacy settings.');
+  if (skills) return skills;
+  throw new Error('No hiscore data was found. Check the spelling, or enter your stats manually if the lookup service is down.');
 }
 
 // Reader relays sometimes collapse the source CSV's newlines into spaces.
@@ -128,19 +154,20 @@ function parseHiscores(csv) {
 async function fetchQuests(playerName) {
   var baseUrl = 'https://apps.runescape.com/runemetrics/quests?user=' + encodeURIComponent(playerName);
 
-  try {
-    var text;
-    if (isLocalDevelopment()) {
-      var response = await fetch('/api/quests?user=' + encodeURIComponent(playerName), { signal: AbortSignal.timeout(5000) });
-      if (!response.ok) return null;
-      text = unwrapReaderContent(await response.text());
-    } else {
-      text = await fetchViaRelay(baseUrl, 5000);
-    }
+  function parse(text) {
     var data = JSON.parse(text);
     // API returns { quests: [...] } array
     var quests = data.quests || data;
-    if (Array.isArray(quests)) return parseQuests(quests);
+    return Array.isArray(quests) ? parseQuests(quests) : null;
+  }
+
+  try {
+    if (isLocalDevelopment()) {
+      var response = await fetch('/api/quests?user=' + encodeURIComponent(playerName), { signal: AbortSignal.timeout(5000) });
+      if (!response.ok) return null;
+      return parse(unwrapReaderContent(await response.text()));
+    }
+    return await fetchViaRelay(baseUrl, 5000, parse);
   } catch (e) { /* Quest data is optional. */ }
 
   // Return null if we can't fetch quests (non-fatal)
@@ -331,7 +358,7 @@ function renderManualStats(values) {
   });
   html += '</div><div class="manual-stats-actions"><button id="save-manual-stats" class="lookup-btn" type="button">Use manual stats</button><button id="clear-manual-stats" class="secondary-btn" type="button">Clear</button></div>';
   container.innerHTML = html;
-  document.getElementById('save-manual-stats').addEventListener('click', applyManualStats);
+  document.getElementById('save-manual-stats').addEventListener('click', function () { applyManualStats(false); });
   document.getElementById('clear-manual-stats').addEventListener('click', clearManualStats);
 }
 

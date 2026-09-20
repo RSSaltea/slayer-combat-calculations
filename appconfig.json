@@ -2,7 +2,7 @@
   "appName": "Slayer & Combat Calculations",
   "description": "Slayer task calculator with Ultimate Slayer collection log detection.",
   "appUrl": "./index.html",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "configUrl": "./appconfig.json",
   "iconUrl": "./icon.png",
   "defaultWidth": 800,

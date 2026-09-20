@@ -41,6 +41,9 @@ html {
   scroll-behavior: smooth;
 }
 
+/* The Alt1 window is small, so the plugin keeps the compact base size. */
+html.alt1 { font-size: 14px; }
+
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   background: var(--bg-primary);
@@ -461,10 +464,6 @@ button, input, select { font: inherit; }
 
 .table-status { color: var(--text-muted); font-size: 0.78rem; margin: -0.5rem 0 0.8rem; min-height: 1.2em; }
 
-.task-control-help { display: grid; gap: 0.6rem; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0 0 0.6rem; }
-.task-control-help > div { background: var(--bg-card); border-left: 3px solid var(--gold-dim); border-radius: 0 var(--radius) var(--radius) 0; color: var(--text-secondary); font-size: 0.76rem; padding: 0.55rem 0.7rem; }
-.task-control-help strong { color: var(--gold-bright); display: block; font-size: 0.78rem; margin-bottom: 0.1rem; }
-.task-control-help span { display: block; }
 
 .table-controls .search-box {
   flex: 1;
@@ -949,6 +948,7 @@ button, input, select { font: inherit; }
 
 @media (max-width: 600px) {
   html { font-size: 14px; }
+  html.alt1 { font-size: 13px; }
   .site-header h1 { font-size: 1.3rem; }
   .boosts-grid { grid-template-columns: 1fr 1fr; }
   .player-stats-grid { grid-template-columns: 1fr 1fr; }
@@ -1248,13 +1248,11 @@ button, input, select { font: inherit; }
 }
 
 .control-label { color: var(--text-muted); font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
-.control-divider { align-self: stretch; background: var(--border); width: 1px; }
-.comparison-description { background: var(--bg-card); border-left: 3px solid var(--blue-dim); border-radius: 0 var(--radius) var(--radius) 0; color: var(--text-secondary); font-size: 0.8rem; margin: 0 0 0.8rem; padding: 0.5rem 0.7rem; }
 
 .player-summary, .plan-summary { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 0.9rem; }
 .profile-pill, .plan-summary-item { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 999px; color: var(--text-secondary); font-size: 0.78rem; padding: 0.35rem 0.65rem; }
 .profile-pill strong, .plan-summary-item strong { color: var(--text-primary); }
-.plan-summary { margin: 0.85rem 0 1.75rem; }
+.plan-summary { margin: 1.25rem 0 0; }
 .plan-summary-item.emphasis { border-color: var(--gold-dim); color: var(--gold-bright); }
 
 .kph-cell:hover .kph-value { color: var(--gold-bright); }
@@ -1355,6 +1353,25 @@ button, input, select { font: inherit; }
 
 .intro-btn.min:hover {
   background: rgba(80, 184, 200, 0.18);
+}
+
+/* ── Per-Monster Scrimshaw Column ────────────────────── */
+.scrim-col {
+  width: 45px;
+  min-width: 45px;
+  text-align: center !important;
+}
+
+.scrim-cell {
+  text-align: center !important;
+  padding: 0.4rem !important;
+}
+
+.scrim-toggle {
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+  accent-color: var(--gold);
 }
 
 /* ── Skip Column ─────────────────────────────────────── */
@@ -2175,8 +2192,6 @@ button.ultimate-card-check { padding: 0; }
   .quick-start-actions { grid-template-columns: 1fr; }
   .section-title { align-items: flex-start; flex-direction: column; }
   .section-title::after { width: 100%; flex: none; }
-  .task-control-help { grid-template-columns: 1fr; }
-  .control-divider { display: none; }
   .home-accordion { margin: 1.25rem 0; }
   .home-accordion summary { align-items: flex-start; flex-wrap: wrap; min-height: 0; padding: 1rem; }
   .home-accordion summary small { flex-basis: calc(100% - 2rem); margin-left: 0; }

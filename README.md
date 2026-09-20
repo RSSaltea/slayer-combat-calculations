@@ -18,7 +18,7 @@ npm run dev
 
 Open the `http://127.0.0.1:<port>` address printed by the command. Vite automatically reloads the page whenever you save an HTML, CSS, or JavaScript change. If port 5173 is busy, it selects the next available port.
 
-When running locally, player lookup is routed through Vite so it works without RuneScape API CORS support. The hosted GitHub Pages version has no server-side proxy; use manual stats there if its public relay is unavailable.
+When running locally, player lookup is routed through Vite so it works without RuneScape API CORS support. The hosted GitHub Pages version has no server-side proxy; use manual stats there if the public relays are unavailable.
 
 ## Features
 

@@ -15,7 +15,7 @@
   <header class="site-header">
     <h1>Slayer & Combat Calculations</h1>
     <p class="site-subtitle">Plan your Slayer tasks, optimise your list, and track Ultimate Slayer progress.</p>
-    <span class="version">v2.3.0</span>
+    <span class="version">v2.4.0</span>
     <span id="app-status" class="app-status" role="status" aria-live="polite"></span>
   </header>
 
@@ -54,6 +54,7 @@
                 <div id="dashboard-block-list" class="dashboard-task-list"></div>
               </section>
             </div>
+            <div id="plan-summary" class="plan-summary"></div>
           </section>
           <section class="dashboard-ultimate-panel">
             <p class="eyebrow">Collection log</p>
@@ -118,7 +119,7 @@
         <div class="accordion-body info-grid">
           <div class="info-card">
             <h3>How to Use</h3>
-            <p>Select your active XP boosts in Calculator settings. The site recalculates XP and GP rates across every tab. Your settings are saved locally in your browser.</p>
+            <p>Select your active XP boosts under Setup &amp; settings. The site recalculates XP and GP rates across every tab. Your settings are saved locally in your browser.</p>
           </div>
           <div class="info-card">
             <h3>Editable KPH</h3>
@@ -156,7 +157,10 @@
             <option value="combatXpTask">Combat XP/Task</option>
             <option value="minsTask">Minutes/Task</option>
           </select>
+          <button id="toggle-task-view" class="toggle-clusters-btn" aria-pressed="false">Group by Task</button>
+          <button id="toggle-clusters" class="toggle-clusters-btn active" aria-pressed="true">Show Clusters</button>
           <button id="toggle-excluded" class="toggle-clusters-btn" aria-pressed="false">Show excluded</button>
+          <button id="toggle-focus-columns" class="toggle-clusters-btn" aria-pressed="false" title="Only show the columns related to the current Rank by metric">Focus columns</button>
         </div>
       </div>
       <p id="task-action-status" class="table-status" role="status" aria-live="polite"></p>
@@ -180,6 +184,7 @@
               <th data-sort="slayXpTask" class="metric-slayer">Slay XP/Task</th>
               <th data-sort="combatXpTask" class="metric-combat">Combat XP/Task</th>
               <th data-sort="minsTask">Mins/Task</th>
+              <th class="scrim-col" title="Per-monster Scrimshaw of Sacrifice (+50% XP, 0 GP)">Scrim</th>
               <th class="skip-col" title="Extended block: spend Slayer points to skip this whole assignment">Extended block</th>
             </tr>
           </thead>
@@ -193,7 +198,7 @@
 
       <h2 class="section-title">Prefer / Block List</h2>
       <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:1rem;">
-        Max 8 each. Manually pinned tasks (lock icon) stay when auto-fill changes. Use the <strong>Skip</strong> column on the Slayer Tasks tab to always skip a task with points (excluded from averages). Locked tasks are excluded from auto-fill.
+        Max 8 each. Manually pinned tasks (lock icon) stay when auto-fill changes. Use the <strong>Extended block</strong> column on the Slayer Tasks tab to always skip a task with points (excluded from averages). Locked tasks are excluded from auto-fill.
       </p>
       <p class="page-intro">Choose a metric to fill open slots automatically, then use + or − to keep the exceptions you care about.</p>
 
@@ -314,7 +319,7 @@
 
   <!-- Footer -->
   <footer class="site-footer">
-    <p>Slayer & Combat Calculations v2.3.0 &middot; Data by the community</p>
+    <p>Slayer & Combat Calculations v2.4.0 &middot; Data by the community</p>
   </footer>
 
   <script src="js/data.js"></script>

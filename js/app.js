@@ -24,6 +24,9 @@
     // Excluded means either blocked by the master or added to the extended
     // block list (skip with points). Hidden by default so rankings stay useful.
     showExcluded: false,
+    showClusters: true,
+    taskView: false,
+    focusColumns: false,       // hide metric columns unrelated to the current sort
     expandedTasks: new Set(),
     prefer: new Set(DEFAULT_PREFER),
     block: new Set(DEFAULT_BLOCK),
@@ -33,6 +36,7 @@
     autoPreferMetric: 'slayXpHr',
     autoBlockMetric: 'slayXpHr',
     customKph: {},
+    scrimshawMonsters: new Set(),
     persuadeUnlocks: new Set(), // which persuade tasks the player has unlocked
     introspectionChoices: {},   // category_id -> 'min' | 'max' (Slayer Introspection)
     ultimateObtained: {},       // item name -> true (Ultimate Slayer tracker)
@@ -72,9 +76,13 @@
         if (p.autoBlockMetric !== undefined) state.autoBlockMetric = p.autoBlockMetric;
         if (p.showExcluded !== undefined) state.showExcluded = p.showExcluded;
         else if (p.showBlocked !== undefined) state.showExcluded = p.showBlocked;
+        if (p.showClusters !== undefined) state.showClusters = p.showClusters;
+        if (p.taskView !== undefined) state.taskView = p.taskView;
+        if (p.focusColumns !== undefined) state.focusColumns = p.focusColumns;
         if (p.sortCol) state.sortCol = p.sortCol;
         if (typeof p.sortAsc === 'boolean') state.sortAsc = p.sortAsc;
         if (p.customKph) state.customKph = p.customKph;
+        if (p.scrimshawMonsters) state.scrimshawMonsters = new Set(p.scrimshawMonsters);
         if (p.persuadeUnlocks) state.persuadeUnlocks = new Set(p.persuadeUnlocks);
         if (p.introspectionChoices) state.introspectionChoices = p.introspectionChoices;
         if (p.ultimateObtained) state.ultimateObtained = p.ultimateObtained;
@@ -96,9 +104,13 @@
         autoPreferMetric: state.autoPreferMetric,
         autoBlockMetric: state.autoBlockMetric,
         showExcluded: state.showExcluded,
+        showClusters: state.showClusters,
+        taskView: state.taskView,
+        focusColumns: state.focusColumns,
         sortCol: state.sortCol,
         sortAsc: state.sortAsc,
         customKph: state.customKph,
+        scrimshawMonsters: Array.from(state.scrimshawMonsters),
         persuadeUnlocks: Array.from(state.persuadeUnlocks),
         introspectionChoices: state.introspectionChoices,
         ultimateObtained: state.ultimateObtained,
@@ -223,7 +235,7 @@
   function computeMonster(m) {
     var key = monsterKey(m);
     var kph = state.customKph[key] || m.kph;
-    var useScrim = state.boosts.scrimshaw;
+    var useScrim = state.scrimshawMonsters.has(key) || state.boosts.scrimshaw;
 
     var sm = getSlayerMult(useScrim);
     var cm = getCombatMult(useScrim);
@@ -285,6 +297,7 @@
       gpTask: gpTask,
       _key: key,
       _customKph: !!state.customKph[key],
+      _scrim: useScrim,
       _locked: lockInfo.locked,
       _lockReasons: lockInfo.reasons,
     };
@@ -576,7 +589,10 @@
 
     renderTaskList('dashboard-prefer-list', state.prefer, state.autoPreferMetric || 'slayXpHr', 'high');
     renderTaskList('dashboard-block-list', state.block, state.autoBlockMetric || 'slayXpHr', 'low');
+  }
 
+  // Bound once at startup; renderDashboard() runs on every update.
+  function initDashboard() {
     document.querySelectorAll('.dashboard-hero [data-dashboard-tab]').forEach(function (button) {
       button.addEventListener('click', function () {
         var tab = button.dataset.dashboardTab;
@@ -623,7 +639,12 @@
     var sortKey = state.sortCol;
     var asc = state.sortAsc;
     var preferredNames = getPreferredNames();
-    renderTaskViewTable(tbody, sortKey, asc, preferredNames);
+    if (state.taskView) {
+      renderTaskViewTable(tbody, sortKey, asc, preferredNames);
+    } else {
+      renderMonsterViewTable(tbody, sortKey, asc, preferredNames);
+    }
+    document.getElementById('task-name-heading').textContent = state.taskView ? 'Assignment' : 'Creature';
 
     // Update sort indicators on headers
     document.querySelectorAll('#tasks-table th').forEach(function (th) {
@@ -643,11 +664,84 @@
       excludedBtn.textContent = state.showExcluded ? 'Hide excluded' : 'Show excluded';
       excludedBtn.setAttribute('aria-pressed', state.showExcluded ? 'true' : 'false');
     }
+    var setToggle = function (id, on) {
+      var btn = document.getElementById(id);
+      if (!btn) return;
+      btn.classList.toggle('active', on);
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    };
+    setToggle('toggle-task-view', state.taskView);
+    setToggle('toggle-clusters', state.showClusters);
+    setToggle('toggle-focus-columns', state.focusColumns);
+    var clusterBtn = document.getElementById('toggle-clusters');
+    if (clusterBtn) clusterBtn.style.display = state.taskView ? 'none' : '';
 
     // Toggle introspection column visibility
     var table = document.getElementById('tasks-table');
     table.classList.toggle('introspection-active', state.boosts.slayerIntrospection);
-    table.dataset.focus = sortKey.indexOf('slay') === 0 ? 'slayer' : (sortKey.indexOf('combat') === 0 ? 'combat' : (sortKey.indexOf('gp') === 0 ? 'gp' : 'all'));
+    var focus = sortKey.indexOf('slay') === 0 ? 'slayer' : (sortKey.indexOf('combat') === 0 ? 'combat' : (sortKey.indexOf('gp') === 0 ? 'gp' : 'all'));
+    table.dataset.focus = state.focusColumns ? focus : 'all';
+  }
+
+  // ── Individual Monster View ──────────────────────────────────────
+  // Every creature ranks as its own row. Prefer / block / extended block are
+  // stored per task category, so all rows of a multi-creature task share them.
+  function renderMonsterViewTable(tbody, sortKey, asc, preferredNames) {
+    var data = MONSTERS.map(computeMonster);
+
+    if (state.search) {
+      var q = state.search.toLowerCase();
+      data = data.filter(function (m) { return displayName(m).toLowerCase().indexOf(q) !== -1; });
+    }
+
+    if (!state.showClusters) {
+      data = data.filter(function (m) { return !m.cluster; });
+    }
+
+    var rows = data.map(function (m) {
+      var catId = getCategoryForMonster(m.name);
+      var isBlocked = !!catId && state.block.has(catId);
+      var isSkipped = !!catId && state.skip.has(catId);
+      return { m: m, isBlocked: isBlocked, isSkipped: isSkipped, isExcluded: isBlocked || isSkipped };
+    });
+
+    var excludedCount = rows.filter(function (r) { return r.isExcluded; }).length;
+    if (!state.showExcluded) rows = rows.filter(function (r) { return !r.isExcluded; });
+
+    rows.sort(function (a, b) {
+      if (sortKey === 'name') {
+        return asc ? displayName(a.m).localeCompare(displayName(b.m)) : displayName(b.m).localeCompare(displayName(a.m));
+      }
+      var va = a.m[sortKey] || 0;
+      var vb = b.m[sortKey] || 0;
+      return asc ? va - vb : vb - va;
+    });
+
+    tbody.innerHTML = '';
+
+    if (rows.length === 0) {
+      var emptyMessage = excludedCount
+        ? 'All matching creatures are excluded. Select Show excluded to review them.'
+        : 'No creatures found.';
+      tbody.innerHTML = '<tr><td colspan="12" class="no-results">' + emptyMessage + '</td></tr>';
+      return;
+    }
+
+    var rank = 0;
+    rows.forEach(function (r) {
+      var m = r.m;
+      if (!m.cluster) rank++;
+      var isPreferred = preferredNames.has(m.name);
+      var tr = document.createElement('tr');
+      if (m.cluster) tr.classList.add('cluster');
+      if (r.isBlocked) tr.classList.add('blocked-row');
+      if (r.isSkipped) tr.classList.add('skipped-row');
+      if (m._locked) tr.classList.add('locked-row');
+      if (isPreferred && !m._locked) tr.style.borderLeft = '3px solid var(--green)';
+      tr.innerHTML = buildRow(m, rank, sortKey, isPreferred, r);
+      attachRowEvents(tr, m);
+      tbody.appendChild(tr);
+    });
   }
 
   function announceTaskAction(message) {
@@ -741,7 +835,7 @@
       var emptyMessage = !state.showExcluded && excluded.length
         ? 'All matching assignments are excluded. Select Show excluded to review them.'
         : 'No Slayer assignments found.';
-      tbody.innerHTML = '<tr><td colspan="11" class="no-results">' + emptyMessage + '</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="12" class="no-results">' + emptyMessage + '</td></tr>';
       return;
     }
 
@@ -800,11 +894,12 @@
       '<td class="metric-slayer ' + lockedClass + hl('slayXpTask') + '">' + fmt(m.slayXpTask) + '</td>' +
       '<td class="metric-combat ' + lockedClass + hl('combatXpTask') + '">' + fmt(m.combatXpTask) + '</td>' +
       '<td class="' + lockedClass + hl('minsTask') + '">' + m.minsTask.toFixed(1) + '</td>' +
+      '<td class="scrim-cell"></td>' +
       '<td class="skip-cell"><input type="checkbox" class="skip-toggle" aria-label="Skip ' + g.cat.label + ' task" title="Skip this whole assignment with Slayer points" data-cat="' + g.cat.id + '"' + (isSkipped ? ' checked' : '') + '></td>';
 
     if (g.monsters.length > 1) {
       tr.addEventListener('click', function (e) {
-        if (e.target.closest('.skip-toggle') || e.target.closest('.intro-btn')) return;
+        if (e.target.closest('.scrim-toggle') || e.target.closest('.skip-toggle') || e.target.closest('.intro-btn')) return;
         if (expanded) {
           state.expandedTasks.delete(g.cat.id);
         } else {
@@ -861,7 +956,9 @@
     }
   }
 
-  function buildRow(m, rank, sortKey, isPreferred) {
+  function buildRow(m, rank, sortKey, isPreferred, flags) {
+    flags = flags || {};
+    var scrimChecked = m._scrim ? ' checked' : '';
     var hl = function (col) { return sortKey === col ? ' highlight' : ''; };
     var kphClass = 'kph-cell' + (m._customKph ? ' custom-kph' : '');
     var lockedClass = m._locked ? ' locked-text' : '';
@@ -874,6 +971,8 @@
         monsterIcon(m.name) +
         '<span class="creature-name">' + displayName(m) + '</span>' +
         (isPreferred && !m._locked ? ' <span class="prefer-tag">PREFER</span>' : '') +
+        (flags.isBlocked ? ' <span class="blocked-tag">BLOCKED</span>' : '') +
+        (flags.isSkipped ? ' <span class="skip-tag">EXTENDED BLOCK</span>' : '') +
         (m._locked ? ' <span class="locked-tag">LOCKED' + (levelRequirement ? ' · ' + levelRequirement.replace(' required ', ' ') : '') + '</span>' : '') +
       '</td>' +
       '<td class="' + kphClass + hl('kph') + '" data-key="' + m._key + '" data-base="' + m.kph + '">' +
@@ -893,6 +992,7 @@
       '<td class="metric-slayer ' + lockedClass + hl('slayXpTask') + '">' + fmt(m.slayXpTask) + '</td>' +
       '<td class="metric-combat ' + lockedClass + hl('combatXpTask') + '">' + fmt(m.combatXpTask) + '</td>' +
       '<td class="' + lockedClass + hl('minsTask') + '">' + m.minsTask.toFixed(1) + '</td>' +
+      '<td class="scrim-cell"><input type="checkbox" class="scrim-toggle" aria-label="Scrimshaw of Sacrifice for ' + displayName(m) + '" data-key="' + m._key + '"' + scrimChecked + '></td>' +
       (function () {
         if (m.cluster) return '<td class="skip-cell"></td>';
         var catId = getCategoryForMonster(m.name);
@@ -943,6 +1043,20 @@
           if (e.key === 'Enter') input.blur();
           if (e.key === 'Escape') { input.value = m.kph; input.blur(); }
         });
+      });
+    }
+
+    var scrimToggle = tr.querySelector('.scrim-toggle');
+    if (scrimToggle) {
+      scrimToggle.addEventListener('click', function (e) { e.stopPropagation(); });
+      scrimToggle.addEventListener('change', function () {
+        if (scrimToggle.checked) {
+          state.scrimshawMonsters.add(m._key);
+        } else {
+          state.scrimshawMonsters.delete(m._key);
+        }
+        saveState();
+        updateAll();
       });
     }
 
@@ -1008,6 +1122,25 @@
     var excludedBtn = document.getElementById('toggle-excluded');
     excludedBtn.addEventListener('click', function () {
       state.showExcluded = !state.showExcluded;
+      saveState();
+      renderTasksTable();
+    });
+
+    document.getElementById('toggle-task-view').addEventListener('click', function () {
+      state.taskView = !state.taskView;
+      state.expandedTasks = new Set();
+      saveState();
+      renderTasksTable();
+    });
+
+    document.getElementById('toggle-clusters').addEventListener('click', function () {
+      state.showClusters = !state.showClusters;
+      saveState();
+      renderTasksTable();
+    });
+
+    document.getElementById('toggle-focus-columns').addEventListener('click', function () {
+      state.focusColumns = !state.focusColumns;
       saveState();
       renderTasksTable();
     });
@@ -2235,8 +2368,8 @@
     var btn = checkBtn;
 
     btn.style.display = '';
-    btn.disabled = false;
-    btn.title = 'Start or stop collection-log scanning';
+    btn.disabled = true;
+    btn.title = 'Waiting for Alt1 fixes';
 
     // Shared update handler used by both UltimateDetector and SkipDetector
     function handleDetectorUpdate(changes) {
@@ -2370,7 +2503,10 @@
   function init() {
     loadState();
     window._persuadeUnlocks = state.persuadeUnlocks;
+    // The Alt1 window is small, so it keeps the compact base font size.
+    if (window.alt1) document.documentElement.classList.add('alt1');
     initTabs();
+    initDashboard();
     initBoosts();
     initTasksTable();
     initPrefBlockControls();
